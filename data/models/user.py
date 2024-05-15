@@ -1,13 +1,12 @@
 from pydantic import BaseModel, constr
-from typing import Optional
-from datetime import datetime
-import re
 
 pattern = r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}|:"<>?[\];\',.\/\\]).{8,}$'
+
 
 class Role:
     ADMIN = 'admin'
     STANDARD = 'standard'
+
 
 class User(BaseModel):
     id: int | None = None
@@ -16,7 +15,6 @@ class User(BaseModel):
     email: str
     phone_number: constr(strip_whitespace=True, min_length=10, max_length=10)
     role: str = Role.STANDARD
-
 
     @classmethod
     def from_query_result(cls, id, username, password, email, phone_number, role):
@@ -29,8 +27,8 @@ class User(BaseModel):
             role=role
         )
 
+
 class LoginData(BaseModel):
     username: str
     password: str
     email: str | None = None
-
