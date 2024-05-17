@@ -7,10 +7,9 @@ from data.models.user import User
 
 def create(username: str, password: str, email: str, phone: str) -> Optional[User]:
     try:
-        hashed_password = security.password_hashing.get_password_hash(password)
         generated_id = insert_query(
             'INSERT INTO users (username, password, email, phone_number) VALUES (%s, %s, %s, %s)',
-            (username, hashed_password, email, phone)
+            (username,password, email, phone)
         )
         if generated_id == -1:
             return None

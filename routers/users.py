@@ -5,7 +5,7 @@ import services.user_services
 from common.authorization import create_access_token
 from common.responses import BadRequest
 from schemas.user import UserCreate, UserOut, UserLogin
-from security.password_hashing import get_password_hash
+from security.password_hashing import verify_password
 from services import user_services
 
 users_router = APIRouter(prefix='/users')
@@ -32,10 +32,13 @@ def register(user_create: UserCreate):
 
 @users_router.post('/login', tags=["Users"])
 def login(user_credentials: UserLogin):
-    user = user_services.try_login(user_credentials.email, user_credentials.password)
+
+    user = services.user_services.try_login(user_credentials.email, user_credentials.password)
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Invalid Credentials")
+    if not verify_password(user_credentials.password, user.password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Invalid Credentials")
 
     access_token = create_access_token(data={"user_id": user.id})
 

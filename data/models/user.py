@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, constr, validator
+from pydantic import BaseModel, constr, validator, EmailStr
 
 
 class User(BaseModel):
     id: int | None
-    email: str
+    email: EmailStr
     username: str
     password: str
     phone_number: str
