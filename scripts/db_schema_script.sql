@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`users` (
   `username` VARCHAR(20) NOT NULL,
   `password` VARCHAR(45) NOT NULL,
   `email` VARCHAR(45) NOT NULL,
+  `balance` FLOAT NOT NULL DEFAULT 0,
   `phone_number` VARCHAR(10) NOT NULL,
   `is_admin` TINYINT(4) NULL DEFAULT 0,
   `create_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP(),
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`users` (
   UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
   UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE)
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = latin1;
  
  
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`cards` (
   `expiration_date` DATE NOT NULL,
   `card_status` ENUM('active', 'not active') NULL DEFAULT 'active',
   `user_id` INT(11) NOT NULL,
+  `balance` FLOAT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `card_number_UNIQUE` (`card_number` ASC) VISIBLE,
@@ -59,6 +62,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`cards` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = latin1;
  
  
@@ -72,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`categories` (
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE,
   UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = latin1;
  
  
@@ -97,6 +102,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`contacts` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = latin1;
  
  
@@ -140,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `e_wallet`.`transactions` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB
+AUTO_INCREMENT = 11
 DEFAULT CHARACTER SET = latin1;
  
  
