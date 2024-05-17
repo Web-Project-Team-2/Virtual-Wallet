@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from data.models.categories import Category
-from common import responses
+from common import responses, authorization
 from services import categories_service
 
 categories_router = APIRouter(prefix="/categories")

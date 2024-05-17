@@ -1,45 +1,30 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, constr, validator
 
 
-class Role:
-    ADMIN = 'admin'
-    STANDARD = 'standard'
-
-
 class User(BaseModel):
-    id: int | None = None
-    username: constr(min_length=2, max_length=20)
-    password: str
+    id: int | None
     email: str
-    phone_number: constr(strip_whitespace=True, min_length=10, max_length=10)
-    role: str = Role.STANDARD
-
-    @validator('password')
-    def password_complexity(cls, value):
-        if len(value) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        if not any(char.isupper() for char in value):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not any(char.isdigit() for char in value):
-            raise ValueError('Password must contain at least one digit')
-        if not any(char in '!@#$%^&*()_+{}|:"<>?[\];\',./\\' for char in value):
-            raise ValueError('Password must contain at least one special character')
-        return value
-
-
-    @classmethod
-    def from_query_result(cls, id, username, password, email, phone_number, role):
-        return cls(
-            id=id,
-            username=username,
-            password=password,
-            email=email,
-            phone_number=phone_number,
-            role=role
-        )
-
-
-class LoginData(BaseModel):
     username: str
     password: str
-    email: str | None = None
+    phone_number: str
+    is_admin: bool = False
+    create_at: datetime | None
+    status: str = 'pending'
+    balance: float = 0.0
+
+    @classmethod
+    def from_query_result(cls, id, email, username, password, phone_number, is_admin, create_at, status, balance):
+        return cls(
+            id=id,
+            email=email,
+            username=username,
+            password=password,
+            phone_number=phone_number,
+            is_admin=bool(is_admin),
+            create_at=create_at,
+            status=status,
+            balance=balance
+        )
