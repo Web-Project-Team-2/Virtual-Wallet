@@ -13,17 +13,17 @@ INSERT INTO `e_wallet`.`users`
  
  
 INSERT INTO `e_wallet`.`cards` 
-(`card_number`, `cvv`, `card_holder`, `expiration_date`, `card_status`, `user_id`) VALUES
-('1234567890123456', '123', 'John Doe', '2025-06-01', 'active', 1),
-('2345678901234567', '234', 'Jane Smith', '2024-12-01', 'active', 2),
-('3456789012345678', '345', 'Admin User', '2026-01-01', 'active', 3),
-('4567890123456789', '456', 'Bob Brown', '2025-05-01', 'not active', 4),
-('5678901234567890', '567', 'Alice White', '2024-11-01', 'active', 5),
-('6789012345678901', '678', 'Charlie Black', '2026-03-01', 'active', 6),
-('7890123456789012', '789', 'Dave Green', '2025-07-01', 'not active', 7),
-('8901234567890123', '890', 'Eve Red', '2024-10-01', 'active', 8),
-('9012345678901234', '901', 'Frank Blue', '2026-02-01', 'not active', 9),
-('0123456789012345', '012', 'Grace Yellow', '2025-08-01', 'active', 10);
+(`card_number`, `cvv`, `card_holder`, `expiration_date`, `card_status`, `user_id`, `balance`) VALUES
+('1234567890123456', '123', 'John Doe', '2025-06-01', 'active', 1, 500),
+('2345678901234567', '234', 'Jane Smith', '2024-12-01', 'active', 2, 500),
+('3456789012345678', '345', 'Admin User', '2026-01-01', 'active', 3, 500),
+('4567890123456789', '456', 'Bob Brown', '2025-05-01', 'not active', 4, 500),
+('5678901234567890', '567', 'Alice White', '2024-11-01', 'active', 5, 500),
+('6789012345678901', '678', 'Charlie Black', '2026-03-01', 'active', 6, 500),
+('7890123456789012', '789', 'Dave Green', '2025-07-01', 'not active', 7, 500),
+('8901234567890123', '890', 'Eve Red', '2024-10-01', 'active', 8, 500),
+('9012345678901234', '901', 'Frank Blue', '2026-02-01', 'not active', 9, 500),
+('0123456789012345', '012', 'Grace Yellow', '2025-08-01', 'active', 10, 500);
  
  
 INSERT INTO `e_wallet`.`categories` (`name`) VALUES
