@@ -21,4 +21,12 @@ class Card(BaseModel):
             user_id=user_id
         )
 
-
+    def to_dict(self):
+        return {
+            "card_number": self.card_number,
+            "cvv": self.cvv,
+            "card_holder": self.card_holder,
+            "expiration_date": self.expiration_date,
+            "card_status": self.card_status,
+            "user_id": self.user_id
+        }
