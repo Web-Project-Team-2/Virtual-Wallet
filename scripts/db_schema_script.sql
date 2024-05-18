@@ -23,7 +23,7 @@ USE `e_wallet` ;
 CREATE TABLE IF NOT EXISTS `e_wallet`.`users` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(20) NOT NULL,
-  `password` VARCHAR(45) NOT NULL,
+  `password` TEXT NOT NULL,
   `email` VARCHAR(45) NOT NULL,
   `balance` FLOAT NOT NULL DEFAULT 0,
   `phone_number` VARCHAR(10) NOT NULL,
