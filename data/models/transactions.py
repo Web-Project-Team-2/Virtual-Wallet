@@ -15,7 +15,7 @@ class Transaction(BaseModel):
 
     @classmethod
     def from_query_result(cls, id, status, transaction_date, amount, 
-                          next_payment, categories_id, sender_id, reciver_id, cards_id):
+                          next_payment, categories_id, sender_id, receiver_id, cards_id):
         return cls(
             id=id,
             status=status,
@@ -24,6 +24,6 @@ class Transaction(BaseModel):
             next_payment=next_payment,
             categories_id=categories_id,
             sender_id=sender_id,
-            reciver_id=reciver_id,
+            receiver_id=receiver_id,
             cards_id=cards_id
         )
