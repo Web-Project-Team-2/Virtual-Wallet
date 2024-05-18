@@ -4,14 +4,14 @@ from datetime import datetime
 
 class Transaction(BaseModel):
     id: int | None = None
-    status: str
-    transaction_date: datetime
+    status: str = 'pending'
+    transaction_date: datetime 
     amount: float
-    next_payment: datetime
-    categories_id: int
-    sender_id: int
+    next_payment: datetime | None = None
+    categories_id: int | None = None
+    sender_id: int | None = None
     receiver_id: int
-    cards_id: int
+    cards_id: int | None = None
 
     @classmethod
     def from_query_result(cls, id, status, transaction_date, amount, 
