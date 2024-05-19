@@ -1,9 +1,11 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 
 import security.password_hashing
 import services.user_services
+from common import authorization
 from common.authorization import create_access_token
-from common.responses import BadRequest
+from services.user_services import view
+from data.models.cards import Card
 from schemas.user import UserCreate, UserOut, UserLogin
 from security.password_hashing import verify_password
 from services import user_services
@@ -43,3 +45,13 @@ def login(user_credentials: UserLogin):
     access_token = create_access_token(data={"user_id": user.id})
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@users_router.get('/info', tags=["Users"])
+def view_info(current_user: int = Depends(authorization.get_current_user)):
+    # try:
+        view_info_result = view(current_user)
+        return view_info_result
+    # except Exception:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to show credit information")
+

@@ -3,16 +3,24 @@ from datetime import datetime, timedelta
 
 
 class TransactionUserContact(BaseModel):
-    status: str 
+    status: str
     amount: float
-    sender_id: int 
+    sender_id: int
     receiver_id: int
 
 
 class TransactionCategory(BaseModel):
-    status: str 
+    status: str
     amount: float
     next_payment: datetime = datetime.now() + timedelta(weeks=4)
-    categories_id: int 
+    categories_id: int
     sender_id: int
+    receiver_id: int
+
+
+class ViewTransactions(BaseModel):
+    status: str
+    transaction_date: str
+    amount: int
+    card_id: int
     receiver_id: int
