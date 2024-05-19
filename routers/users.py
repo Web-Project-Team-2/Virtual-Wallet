@@ -49,9 +49,10 @@ def login(user_credentials: UserLogin):
 
 @users_router.get('/info', tags=["Users"])
 def view_info(current_user: int = Depends(authorization.get_current_user)):
-    # try:
+    try:
         view_info_result = view(current_user)
         return view_info_result
-    # except Exception:
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to show credit information")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to show credit information")
+
 

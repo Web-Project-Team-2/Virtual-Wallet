@@ -13,7 +13,7 @@ def create(username: str, password: str, email: str, phone: str) -> Optional[Use
             'INSERT INTO users (username, password, email, phone_number) VALUES (%s, %s, %s, %s)',
             (username, password, email, phone)
         )
-        if generated_id == -1:
+        if not generated_id:
             return None
         data = read_query(
             'SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance FROM users WHERE id = %s',
@@ -55,7 +55,7 @@ def view(user_id: int):
     display_info = {
         "card_number": info[0][0],
         "balance": info[0][1],
-        "status": info[0][2],
+        "card status": info[0][2],
         "expiration date": info[0][3],
         "transactions": transactions
     }
