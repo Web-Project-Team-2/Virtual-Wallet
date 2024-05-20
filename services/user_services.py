@@ -5,6 +5,7 @@ from data.database_queries import insert_query, read_query
 from data.models.cards import Card
 from data.models.user import User
 from schemas.transactions import ViewTransactions
+from schemas.user import UserInfo
 
 
 def create(username: str, password: str, email: str, phone: str) -> Optional[User]:
@@ -42,7 +43,7 @@ def try_login(email: str, password: str) -> Optional[User]:
 def view(user_id: int):
     info = read_query('SELECT card_number, balance, card_status, expiration_date from cards WHERE user_id = %s',
                       (user_id,))
-
+    all_cards = ()
     transactions_data = read_query(
         'SELECT status, transaction_date, amount, cards_id, receiver_id from transactions WHERE sender_id = %s',
         (user_id,))
@@ -53,10 +54,21 @@ def view(user_id: int):
         transactions = "No transactions"
 
     display_info = {
-        "card_number": info[0][0],
+        "card numbers": info[0][0],
         "balance": info[0][1],
         "card status": info[0][2],
         "expiration date": info[0][3],
         "transactions": transactions
     }
     return display_info
+
+
+def view_profile(user_id: int):
+    user_info = read_query('SELECT username, email, balance, phone_number from users WHERE id = %s', (user_id,))
+    result = (UserInfo(username=username, email=email, balance=balance, phone_number=phone_number) for
+              username, email, balance, phone_number in user_info)
+
+    if not user_info:
+        result = "No user information available"
+
+    return result

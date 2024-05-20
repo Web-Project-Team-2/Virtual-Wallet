@@ -1,23 +1,23 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-
 import security.password_hashing
 import services.user_services
 from common import authorization
 from common.authorization import create_access_token
+from common.helper_functions import check_password
+from common.wallet_info import detailed_info
 from services.user_services import view
-from data.models.cards import Card
 from schemas.user import UserCreate, UserOut, UserLogin
 from security.password_hashing import verify_password
 from services import user_services
-from data.models.user import User
+from services.user_services import view_profile
 
 users_router = APIRouter(prefix='/users')
+public_router = APIRouter()
 
 
 @users_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserOut, tags=["Users"])
 def register(user_create: UserCreate):
-    if not User.check_password(user_create.password):
-        return "Password should"
+    check_password(user_create.password)
 
     hashed_password = security.password_hashing.get_password_hash(user_create.password)
     user_create.password = hashed_password
@@ -38,7 +38,6 @@ def register(user_create: UserCreate):
 
 @users_router.post('/login', tags=["Users"])
 def login(user_credentials: UserLogin):
-
     user = services.user_services.try_login(user_credentials.email, user_credentials.password)
 
     if not user:
@@ -51,8 +50,8 @@ def login(user_credentials: UserLogin):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@users_router.get('/info', tags=["Users"])
-def view_info(current_user: int = Depends(authorization.get_current_user)):
+@users_router.get('/credit', tags=["Users"])
+def view_credit_info(current_user: int = Depends(authorization.get_current_user)):
     try:
         view_info_result = view(current_user)
         return view_info_result
@@ -60,3 +59,15 @@ def view_info(current_user: int = Depends(authorization.get_current_user)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to show credit information")
 
 
+@users_router.get('/info', tags=["Users"])
+def view_user_info(current_user: int = Depends(authorization.get_current_user)):
+    try:
+        view_info_result = view_profile(current_user)
+        return view_info_result
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to show user information")
+
+
+@public_router.get('/info', tags=["Public"])
+def get_detailed_info():
+    return detailed_info
