@@ -9,12 +9,16 @@ from data.models.cards import Card
 from schemas.user import UserCreate, UserOut, UserLogin
 from security.password_hashing import verify_password
 from services import user_services
+from data.models.user import User
 
 users_router = APIRouter(prefix='/users')
 
 
 @users_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserOut, tags=["Users"])
 def register(user_create: UserCreate):
+    if not User.check_password(user_create.password):
+        return "Password should"
+
     hashed_password = security.password_hashing.get_password_hash(user_create.password)
     user_create.password = hashed_password
 
