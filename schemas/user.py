@@ -19,3 +19,10 @@ class UserOut(BaseModel):
     username: str
     phone_number: str
 
+
+class UserInfo(BaseModel):
+    username: str
+    email: str
+    balance: int
+    phone_number: int
+

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, Response, status, HTTPException
 from schemas.cards import CardCreate
 from services.cards_services import create
 from common import authorization
-from data.models.cards import Card
 from services.cards_services import delete
 
 cards_router = APIRouter(prefix="/cards")
