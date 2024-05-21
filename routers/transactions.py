@@ -3,7 +3,7 @@ from common.responses import NotFound, BadRequest, InternalServerError, Unauthor
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
 from schemas import transactions
-from services import transactions_service
+from services import transactions_service, user_services, categories_service
 from datetime import datetime, timedelta
 
 
@@ -62,15 +62,29 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
      transaction.transaction_date = datetime.now()
      transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
 
-     return transactions_service.create_transactions(transaction, current_user)
+     return transactions_service.add_money_to_users_ballnace(transaction, current_user)
 
 @transactions_router.post('/', status_code=201, tags=['Transactions']) 
-def make_a_transaction():
+def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
      '''
-     Makes a transaction to another user or category.\n
-     Parameters explanation to follow.
+     This function makes a transaction to another user or category.\n
+
+     Parameters:\n
+     - transaction : Transaction\n
+        - The transaction details to be added to the user's wallet.\n
+     - current_user: int\n
+        - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+        - This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     pass
+     
+     transaction.transaction_date = datetime.now()
+     transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
+
+     transaction.receiver_id = user_services.user_id_exists(transaction.receiver_id)
+     transaction.categories_id = categories_service.find_category_by_id(transaction.categories_id)
+
+     if transaction.receiver_id and transaction.categories_id:
+          return transactions_service.create_transactions(transaction)
 
 @transactions_router.put('/approval', status_code=201, tags=['Transactions'])  
 def approve_a_transaction():
