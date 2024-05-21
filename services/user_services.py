@@ -1,9 +1,11 @@
 from typing import Optional
 from mariadb import IntegrityError
 import security.password_hashing
+from common.helper_functions import convert_to_datetime
 from data.database_queries import insert_query, read_query
 from data.models.cards import Card
 from data.models.user import User
+from schemas.cards import ViewCard
 from schemas.transactions import ViewTransactions
 from schemas.user import UserInfo
 
@@ -41,25 +43,42 @@ def try_login(email: str, password: str) -> Optional[User]:
 
 
 def view(user_id: int):
-    info = read_query('SELECT card_number, balance, card_status, expiration_date from cards WHERE user_id = %s',
-                      (user_id,))
-    all_cards = ()
+    # Fetch user card information
+    card_info = read_query('SELECT card_number, balance, card_holder from cards WHERE user_id = %s', (user_id,))
+
+    # Generate card objects
+    cards = [
+        {"card_number": card_number, "balance": balance, "card_holder": card_holder}
+        for card_number, balance, card_holder in card_info
+    ]
+
+    # Fetch user transaction information
     transactions_data = read_query(
         'SELECT status, transaction_date, amount, cards_id, receiver_id from transactions WHERE sender_id = %s',
         (user_id,))
-    transactions = (ViewTransactions(status=status, transactions_data=transaction_date, amount=amount, card_id=card_id,
-                                     receiver_id=receiver_id)
-                    for status, transaction_date, amount, card_id, receiver_id in transactions_data)
-    if not transactions_data:
+
+    # Generate transaction objects
+    transactions = [
+        {"status": status, "transaction_date": transaction_date, "amount": amount, "card_id": card_id,
+         "receiver_id": receiver_id}
+        for status, transaction_date, amount, card_id, receiver_id in transactions_data
+    ]
+
+    if not transactions:
         transactions = "No transactions"
 
-    display_info = {
-        "card numbers": info[0][0],
-        "balance": info[0][1],
-        "card status": info[0][2],
-        "expiration date": info[0][3],
-        "transactions": transactions
-    }
+    # Check if any cards exist for the user
+    if card_info:
+        display_info = {
+            "cards": cards,
+            "transactions": transactions
+        }
+    else:
+        display_info = {
+            "message": "No cards found for the user",
+            "transactions": transactions
+        }
+
     return display_info
 
 
@@ -72,6 +91,7 @@ def view_profile(user_id: int):
         result = "No user information available"
 
     return result
+
 
 def user_id_exists(user_id: int):
     return any(read_query(

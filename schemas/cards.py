@@ -14,3 +14,10 @@ class CardCreate(BaseModel):
             "card_holder": self.card_holder,
             "expiration_date": self.expiration_date,
         }
+
+
+class ViewCard(BaseModel):
+    card_number: int
+    cvv: int
+    card_holder: str
+
