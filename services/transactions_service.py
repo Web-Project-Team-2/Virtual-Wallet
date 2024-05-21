@@ -76,12 +76,25 @@ def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
 
      return transaction, user_ballance
 
-# service which will create a transaction to the transactions column in the DB - create_transactions()
-def create_transactions():
-     '''Explanation to follow.\n
-     Parameters explanation to follow.
+def create_transactions(transaction: Transaction):
      '''
-     pass
+     This function makes a transaction to another user or category.\n
+
+     Parameters:\n
+     - receiver_id: int\n
+        - The ID of the user who will receive the transaction.\n
+     -  categories_id: int\n
+        - The ID of the category to which the transaction is related.
+     '''
+     generated_id = insert_query(
+                    '''INSERT INTO transactions(id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id) 
+                           VALUES(?,?,?,?,?,?,?,?,?)''',
+                    (transaction.id,transaction.status, transaction.transaction_date, transaction.amount, transaction.next_payment,
+                                transaction.categories_id, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+
+     transaction.id = generated_id
+
+     return transaction
 
 # service which will check if a transaction exists - not cancelled by the sender?
 def transaction_id_exists():
