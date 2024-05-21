@@ -5,6 +5,7 @@ from common import authorization
 from common.authorization import create_access_token
 from common.helper_functions import check_password
 from common.wallet_info import detailed_info
+from schemas.contact import ContactCreate
 from services.user_services import view
 from schemas.user import UserCreate, UserOut, UserLogin
 from security.password_hashing import verify_password
@@ -71,3 +72,36 @@ def view_user_info(current_user: int = Depends(authorization.get_current_user)):
 @public_router.get('/info', tags=["Public"])
 def get_detailed_info():
     return detailed_info
+
+
+@users_router.post('/create', status_code=status.HTTP_201_CREATED, tags=["Contacts"])
+def create_contact(contact_create: ContactCreate, current_user: int = Depends(authorization.get_current_user)):
+    contact_created = user_services.create_contact(current_user, contact_create.contact_user_id)
+
+    if not contact_created:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Unable to create contact. The user might already be a contact or does not exist.")
+
+    return {"message": "Contact created successfully", "contact_username": contact_created["contact_username"]}
+
+
+@users_router.delete('/contacts/{contact_user_id}', status_code=status.HTTP_200_OK, tags=["Contacts"])
+def delete_contact(contact_user_id: int, current_user: int = Depends(authorization.get_current_user)):
+    contact_deleted = user_services.delete_contact(current_user, contact_user_id)
+
+    if not contact_deleted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Unable to delete contact. The contact does not exist.")
+
+    return {"message": "Contact deleted successfully"}
+
+
+@users_router.get('/contacts', status_code=status.HTTP_200_OK, tags=["Contacts"])
+def get_all_contacts(current_user: int = Depends(authorization.get_current_user)):
+    contacts = user_services.get_all_contacts(current_user)
+
+    if contacts is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Unable to fetch contacts.")
+
+    return {"contacts": contacts}

@@ -2,7 +2,7 @@ from typing import Optional
 from mariadb import IntegrityError
 import security.password_hashing
 from common.helper_functions import convert_to_datetime
-from data.database_queries import insert_query, read_query
+from data.database_queries import insert_query, read_query, delete_query
 from data.models.cards import Card
 from data.models.user import User
 from schemas.cards import ViewCard
@@ -99,3 +99,48 @@ def user_id_exists(user_id: int):
                FROM users 
                WHERE id = ?''',
         (user_id,)))
+
+
+def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
+    try:
+        insert_query(
+            'INSERT INTO contacts (users_id, contact_user_id) VALUES (%s, %s)',
+            (user_id, contact_user_id)
+        )
+        contact_username = read_query(
+            'SELECT username FROM users WHERE id = %s',
+            (contact_user_id,)
+        )
+        return {"contact_user_id": contact_user_id, "contact_username": contact_username[0][0]}
+    except IntegrityError:
+        return None
+
+
+def delete_contact(user_id: int, contact_user_id: int) -> bool:
+    existing_contact = read_query(
+        'SELECT * FROM contacts WHERE users_id = %s AND contact_user_id = %s',
+        (user_id, contact_user_id)
+    )
+    if not existing_contact:
+        return False  # No such contact exists
+
+    try:
+        delete_query(
+            'DELETE FROM contacts WHERE users_id = %s AND contact_user_id = %s',
+            (user_id, contact_user_id)
+        )
+        return True
+    except IntegrityError:
+        return False
+
+
+def get_all_contacts(user_id: int) -> Optional[list]:
+    try:
+        contacts = read_query(
+            'SELECT contact_user_id, (SELECT username FROM users WHERE id = contact_user_id) AS contact_username FROM contacts WHERE users_id = %s',
+            (user_id,)
+        )
+        return [{"contact_user_id": contact[0], "contact_username": contact[1]} for contact in contacts]
+    except Exception as e:
+        print(f"Error fetching contacts: {e}")
+        return None
