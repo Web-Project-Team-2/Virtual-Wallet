@@ -1,4 +1,5 @@
 from data.models.transactions import Transaction
+from data.models.user import User
 from data.database_queries import read_query, insert_query, update_query
 from schemas import transactions
 
@@ -51,13 +52,29 @@ def show_transaction_by_id(transaction_id: int):
      
      return transaction
 
+def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
+     '''This function makes a transaction to the user wallet's ballance.
 
-# service which will add money to the balance attribute for the users column in the DB - 
-def add_money_to_users_ballnace():
-     '''Explanation to follow.\n
-     Parameters explanation to follow.
+     Parameters:
+     transaction : Transaction
+        The transaction details to be added to the user's wallet.
+     current_user: int
+        The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
+        This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     pass
+     generated_id = insert_query(
+                    '''INSERT INTO transactions(id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id) 
+                           VALUES(?,?,?,?,?,?,?,?,?)''',
+                    (transaction.id,transaction.status, transaction.transaction_date, transaction.amount, transaction.next_payment,
+                                transaction.categories_id, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+     
+     user_ballance = update_query(
+                    '''UPDATE users SET balance = balance + ? WHERE id = ?''',
+                    (transaction.amount, current_user))
+
+     transaction.id = generated_id
+
+     return transaction, user_ballance
 
 # service which will create a transaction to the transactions column in the DB - create_transactions()
 def create_transactions():
