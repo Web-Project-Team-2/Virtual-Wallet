@@ -7,7 +7,6 @@ class Transaction(BaseModel):
     status: str = 'pending'
     transaction_date: datetime 
     amount: float
-    next_payment: datetime | None = None
     categories_id: int | None = None
     sender_id: int | None = None
     receiver_id: int
@@ -15,13 +14,12 @@ class Transaction(BaseModel):
 
     @classmethod
     def from_query_result(cls, id, status, transaction_date, amount, 
-                          next_payment, categories_id, sender_id, receiver_id, cards_id):
+                          categories_id, sender_id, receiver_id, cards_id):
         return cls(
             id=id,
             status=status,
             transaction_date=transaction_date,
             amount=amount,
-            next_payment=next_payment,
             categories_id=categories_id,
             sender_id=sender_id,
             receiver_id=receiver_id,
