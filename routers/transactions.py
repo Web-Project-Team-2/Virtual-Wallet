@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from common.responses import NotFound, BadRequest, InternalServerError, Unauthorized, NoContent
+from fastapi import APIRouter, Depends, HTTPException, status
+from jose import JWTError
+from common.responses import NotFound, BadRequest
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
-from schemas import transactions
+from schemas.transactions import TransactionViewAll, TransactionView
 from services import transactions_service, user_services, categories_service
-from datetime import datetime, timedelta
-
+from datetime import datetime
+from typing import List
 
 transactions_router = APIRouter(prefix='/transactions')
 
-@transactions_router.get('/', status_code=201, tags=['Transactions'])  
+@transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
 def get_users_transactions(current_user: int = Depends(get_current_user)):
    '''
    This function returns a list of all the transactions for the specified user.\n
@@ -19,12 +20,18 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    ''' 
+   try:
+      users_transactions = transactions_service.view_all_transactions(current_user)
+      transactions_view = [TransactionViewAll.transaction_view(transaction) for transaction in users_transactions]
+      return transactions_view
+   
+   except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired.'
+        )
 
-   transactions_lst = transactions_service.show_all_transactions(current_user)
-
-   return transactions_lst 
-
-@transactions_router.get('/id/{transaction_id}', status_code=201, tags=['Transactions']) 
+@transactions_router.get('/id/{transaction_id}', response_model=List[TransactionView], status_code=201, tags=['Transactions']) 
 def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
    '''
    This function returns a more detailed information about a user's transactions.\n
@@ -36,7 +43,7 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
-
+   
    transaction = transactions_service.show_transaction_by_id(transaction_id)
 
    if transaction is None:
