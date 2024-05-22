@@ -1,9 +1,9 @@
 from data.models.transactions import Transaction
 from data.models.user import User
 from data.database_queries import read_query, insert_query, update_query
-from schemas import transactions
+from schemas.transactions import TransactionViewAll
 
-def show_all_transactions(current_user: int):
+def view_all_transactions(current_user: int):
      '''
      This function returns a list of all the transactions for the authenticated user.
 
@@ -13,16 +13,21 @@ def show_all_transactions(current_user: int):
           This parameter is used to ensure that the request is made by an authenticated user.
 
      '''
-     transactions = read_query('''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id
+     transactions_out = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
                                         FROM transactions
                                         WHERE sender_id = ?''',
                                    (current_user,))
+     
+     transactions_in = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+                                        FROM transactions
+                                        WHERE receiver_id = ?''',
+                                   (current_user,))
+     
+     transactions = transactions_out + transactions_in
 
      transactions_data = []
      for row in transactions:
           transaction = Transaction.from_query_result(*row)
-          transaction.transaction_date = transaction.transaction_date.strftime('%Y/%m/%d %H:%M')
-          transaction.next_payment = transaction.next_payment.strftime('%Y/%m/%d %H:%M')
           transactions_data.append(transaction)
 
      return transactions_data
