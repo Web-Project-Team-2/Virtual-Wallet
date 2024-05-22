@@ -9,15 +9,15 @@ def show_all_transactions(current_user: int):
 
      Parameters:
      current_user : int
-        The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
-        This parameter is used to ensure that the request is made by an authenticated user.
+          The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
+          This parameter is used to ensure that the request is made by an authenticated user.
 
      '''
      transactions = read_query('''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id
-                                      FROM transactions
-                                      WHERE sender_id = ?''',
-                               (current_user,))
-     
+                                        FROM transactions
+                                        WHERE sender_id = ?''',
+                                   (current_user,))
+
      transactions_data = []
      for row in transactions:
           transaction = Transaction.from_query_result(*row)
@@ -80,11 +80,9 @@ def create_transactions(transaction: Transaction):
      '''
      This function makes a transaction to another user or category.\n
 
-     Parameters:\n
-     - receiver_id: int\n
-        - The ID of the user who will receive the transaction.\n
-     -  categories_id: int\n
-        - The ID of the category to which the transaction is related.
+     Parameters:
+     transaction : Transaction
+        The transaction details to be added to the user's wallet.
      '''
      generated_id = insert_query(
                     '''INSERT INTO transactions(id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id) 
@@ -96,12 +94,29 @@ def create_transactions(transaction: Transaction):
 
      return transaction
 
-# service which will check if a transaction exists - not cancelled by the sender?
-def transaction_id_exists():
+def transaction_id_exists(transaction_id: int):
      '''Explanation to follow.\n
      Parameters explanation to follow.
      '''
-     pass
+     return any(
+     read_query(
+          '''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id 
+                 FROM transactions 
+                 WHERE id = ?''',
+          (transaction_id,)))
+
+def approve_transaction(transaction_id: int):
+     transactions = read_query('''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+     update_query('UPDATE transactions SET status=%s WHERE id = %s',
+                 (transaction_id))
+
+     return transaction
+
 
 
 
