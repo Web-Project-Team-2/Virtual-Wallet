@@ -1,26 +1,41 @@
 from pydantic import BaseModel, constr
 from datetime import datetime, timedelta
+from data.models.user import User
 
 
-class TransactionUserContact(BaseModel):
-    status: str
-    amount: float
-    sender_id: int
-    receiver_id: int
-
-
-class TransactionCategory(BaseModel):
-    status: str
-    amount: float
-    next_payment: datetime = datetime.now() + timedelta(weeks=4)
-    categories_id: int
-    sender_id: int
-    receiver_id: int
-
-
-class ViewTransactions(BaseModel):
-    status: str
+class TransactionViewAll(BaseModel):
+    status: str 
     transaction_date: str
-    amount: int
-    card_id: int
+    amount: float
+    sender_id: int
     receiver_id: int
+
+    @classmethod
+    def transaction_view(cls, transaction):
+        return cls(
+            status=transaction.status,
+            transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
+            amount=transaction.amount,
+            sender_id=transaction.sender_id,
+            receiver_id=transaction.receiver_id
+        )
+
+
+class TransactionView(BaseModel):
+    status: str 
+    transaction_date: str
+    amount: float
+    sender_id: int 
+    receiver_id: int
+    cards_id: int
+
+    @classmethod
+    def transaction_view(cls, transaction):
+        return cls(
+            status=transaction.status,
+            transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
+            amount=transaction.amount,
+            sender_id=transaction.sender_id,
+            receiver_id=transaction.receiver_id,
+            cards_id=transaction.cards_id
+        )
