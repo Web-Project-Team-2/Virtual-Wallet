@@ -6,7 +6,7 @@ from data.database_queries import insert_query, read_query, delete_query
 from data.models.cards import Card
 from data.models.user import User
 from schemas.cards import ViewCard
-from schemas.transactions import ViewTransactions
+from schemas.transactions import TransactionView
 from schemas.user import UserInfo
 
 
