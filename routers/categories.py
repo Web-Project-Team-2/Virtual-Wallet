@@ -31,3 +31,4 @@ async def create_category(category: Category, current_user: int = Depends(author
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to create category")
 
     return _category
+
