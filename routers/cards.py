@@ -8,7 +8,7 @@ from services.cards_services import delete
 cards_router = APIRouter(prefix="/cards")
 
 
-@cards_router.post('/')
+@cards_router.post('/', tags=["Cards"])
 def create_card(card_details: CardCreate, current_user: int = Depends(authorization.get_current_user)):
     try:
         create(**card_details.to_dict(), user_id=current_user)
@@ -17,7 +17,7 @@ def create_card(card_details: CardCreate, current_user: int = Depends(authorizat
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to create card")
 
 
-@cards_router.delete('/{card_id}', tags=["Users"])
+@cards_router.delete('/{card_id}', tags=["Cards"])
 def delete_card(card_id: int, current_user: int = Depends(authorization.get_current_user)):
     try:
         success = delete(card_id, current_user)
