@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, constr
 from datetime import datetime, timedelta
 from data.models.user import User
@@ -39,3 +41,15 @@ class TransactionView(BaseModel):
             receiver_id=transaction.receiver_id,
             cards_id=transaction.cards_id
         )
+
+
+class TransactionFilters(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    sender_id: Optional[int] = None
+    recipient_id: Optional[int] = None
+    direction: Optional[str] = None
+    limit: int = 10
+    offset: int = 0
+    sort_by: str = 'transaction_date'
+    sort_order: str = 'asc'
