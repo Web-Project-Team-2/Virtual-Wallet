@@ -25,3 +25,7 @@ def create_category(category: Category, current_user: int = Depends(authorizatio
 
     return _category
 
+
+@categories_router.get('/{id}')
+def get_category_by_id(id: int):
+    return categories_service.find_category_by_id(id)
