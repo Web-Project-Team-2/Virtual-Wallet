@@ -242,3 +242,33 @@ def view_user_transactions(user_id: int, current_user: int, filters: Transaction
             "card_id": user_data[5]
         } for user_data in get_user_data
     ]
+
+
+def pending_transactions(current_user: int, user_id: int):
+
+    admin_status = read_query('SELECT is_admin FROM users WHERE id=?', (current_user,))
+
+    if not admin_status or not admin_status[0][0]:
+        return "Not authorized. Must be an admin"
+
+    pending_transactions_data = read_query("SELECT id FROM transactions WHERE status='pending' AND sender_id=?",
+                                           (user_id,))
+    if not pending_transactions_data:
+        return "There aren't any pending transactions."
+
+    for transaction in pending_transactions_data:
+        transaction_id = transaction[0]
+        update_query("UPDATE transactions SET status='declined' WHERE id=?", (transaction_id,))
+
+    return "All pending transactions have been declined."
+
+
+
+
+
+
+
+
+
+
+
