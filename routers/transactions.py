@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
-from common.responses import NotFound, BadRequest
+from common.responses import BadRequest, NotFound
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, categories_service
+from services import transactions_service, user_services, categories_service, cards_services
 from datetime import datetime
 from typing import List
 
-# branchtestN
 
 transactions_router = APIRouter(prefix='/transactions')
+
 
 @transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
 def get_users_transactions(current_user: int = Depends(get_current_user)):
@@ -24,14 +24,29 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
    ''' 
    try:
       users_transactions = transactions_service.view_all_transactions(current_user)
-      transactions_view = [TransactionViewAll.transaction_view(transaction) for transaction in users_transactions]
+
+      transactions_view = []
+      for users_transaction in users_transactions:
+         sender = user_services.get_user_by_id(users_transaction.sender_id)
+         receiver = user_services.get_user_by_id(users_transaction.receiver_id)
+
+         if current_user == sender.id: 
+            direction = 'outgoing'
+         if current_user == receiver.id:
+            direction = 'incoming'
+
+         if not sender or not receiver:
+               return NotFound(content='Required data not found.')
+         
+         transactions_view.append(TransactionViewAll.transactions_view(users_transaction, sender, receiver, direction))
+      
       return transactions_view
-   
+
    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Your session has expired.'
-        )
+      raise HTTPException(
+         status_code=status.HTTP_401_UNAUTHORIZED,
+         detail='Your session has expired. Please log in again to continue using the application.')
+
 
 @transactions_router.get('/id/{transaction_id}', response_model=List[TransactionView], status_code=201, tags=['Transactions']) 
 def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
@@ -45,13 +60,32 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
-   
-   transaction = transactions_service.show_transaction_by_id(transaction_id)
+   try:
+      transaction = transactions_service.view_transaction_by_id(transaction_id, current_user)
+      sender = user_services.get_user_by_id(transaction.sender_id)
+      receiver = user_services.get_user_by_id(transaction.receiver_id)
+      card_holder = cards_services.get_card_by_id(transaction.cards_id)
+      card_number = cards_services.get_card_by_id(transaction.cards_id)
 
-   if transaction is None:
-      return NotFound() # status_code=404
-   else:
-      return transaction
+      if current_user == sender.id: 
+         direction = 'outgoing'
+      if current_user != sender.id:
+         direction = 'incoming'
+
+      if not sender or not receiver or not card_holder or not card_number:
+            return NotFound(content='Required data not found.')
+      
+      if transaction is None:
+         return NotFound(content=f'The transaction you are looking for is not available.')
+      else:
+         transaction = [TransactionView.transaction_view(transaction, sender, receiver,direction, card_holder, card_number)]
+         return transaction
+      
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
+   
 
 @transactions_router.post('/wallet', status_code=201, tags=['Transactions']) 
 def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
