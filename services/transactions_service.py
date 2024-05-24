@@ -2,6 +2,7 @@ from data.models.transactions import Transaction
 from data.models.user import User
 from data.database_queries import read_query, insert_query, update_query
 from schemas.transactions import TransactionViewAll
+from common.responses import Unauthorized, NotFound, BadRequest
 
 def view_all_transactions(current_user: int):
      '''
@@ -14,25 +15,25 @@ def view_all_transactions(current_user: int):
 
      '''
      transactions_out = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
-                                        FROM transactions
-                                        WHERE sender_id = ?''',
+                                          FROM transactions
+                                          WHERE sender_id = ?''',
                                    (current_user,))
      
      transactions_in = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
-                                        FROM transactions
-                                        WHERE receiver_id = ?''',
+                                         FROM transactions
+                                         WHERE receiver_id = ?''',
                                    (current_user,))
      
-     transactions = transactions_out + transactions_in
+     transactions_all = transactions_out + transactions_in
 
      transactions_data = []
-     for row in transactions:
+     for row in transactions_all:
           transaction = Transaction.from_query_result(*row)
           transactions_data.append(transaction)
 
      return transactions_data
 
-def show_transaction_by_id(transaction_id: int):
+def view_transaction_by_id(transaction_id: int, current_user: int):
      '''
      This finction returns a more detailed information about a user's transactions.
 
@@ -44,18 +45,30 @@ def show_transaction_by_id(transaction_id: int):
         The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
         This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     transactions = read_query('''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id
-                                      FROM transactions
-                                      WHERE id = ?''',
-                               (transaction_id,))
-     
-     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+     transactions_out = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+                                          FROM transactions
+                                          WHERE sender_id = ?''',
+                                   (current_user,))
+     transactions_in = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+                                         FROM transactions
+                                         WHERE receiver_id = ?''',
+                                  (current_user,))
+     transactions_all = transactions_out + transactions_in
 
-     if transaction:
-          transaction.transaction_date = transaction.transaction_date.strftime('%Y/%m/%d %H:%M')
-          transaction.next_payment = transaction.next_payment.strftime('%Y/%m/%d %H:%M')
+     if transactions_all:
+          transaction_by_id = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+                                                FROM transactions
+                                                WHERE id = ?''',
+                                         (transaction_id,))
+     else:
+          return None
      
-     return transaction
+     transaction = next((Transaction.from_query_result(*row) for row in transaction_by_id), None)
+
+     if transaction is None:
+          return None
+     else:
+          return transaction 
 
 def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
      '''This function makes a transaction to the user wallet's ballance.
