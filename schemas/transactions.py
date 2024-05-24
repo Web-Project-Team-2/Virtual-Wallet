@@ -1,26 +1,25 @@
 from typing import Optional
-
-from pydantic import BaseModel, constr
-from datetime import datetime, timedelta
-from data.models.user import User
-from data.models.cards import Card
+from pydantic import BaseModel
+from datetime import datetime
 
 
 class TransactionViewAll(BaseModel):
     status: str 
     transaction_date: str
     amount: float
-    sender_id: int
-    receiver_id: int
+    sender: str
+    receiver: str
+    direction: str
 
     @classmethod
-    def transactions_view(cls, transaction):
+    def transactions_view(cls, transaction, sender, receiver, direction):
         return cls(
             status=transaction.status,
             transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
             amount=transaction.amount,
-            sender_id=transaction.sender_id,
-            receiver_id=transaction.receiver_id
+            sender=sender.username,
+            receiver=receiver.username,
+            direction=direction
         )
 
 
@@ -28,22 +27,24 @@ class TransactionView(BaseModel):
     status: str 
     transaction_date: str
     amount: float
-    sender_id: str 
-    receiver_id: str
+    sender: str 
+    receiver: str
     direction: str
-    cards_id: int
+    card_holder: str
+    card_number: int
 
     @classmethod
-    def transaction_view(cls, transaction,sender, receiver, direction, card):
+    def transaction_view(cls, transaction, sender, receiver, direction, card_holder, card_number):
        
         return cls(
             status=transaction.status,
             transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
             amount=transaction.amount,
-            sender_id=sender.username,
-            receiver_id=receiver.username,
+            sender=sender.username,
+            receiver=receiver.username,
             direction=direction,
-            cards_id=card.card_number
+            card_holder=card_holder.card_holder,
+            card_number=card_number.card_number
         )
 
 

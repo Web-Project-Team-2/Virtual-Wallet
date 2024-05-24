@@ -24,9 +24,24 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
    ''' 
    try:
       users_transactions = transactions_service.view_all_transactions(current_user)
-      transactions_view = [TransactionViewAll.transactions_view(transaction) for transaction in users_transactions]
+
+      transactions_view = []
+      for users_transaction in users_transactions:
+         sender = user_services.get_user_by_id(users_transaction.sender_id)
+         receiver = user_services.get_user_by_id(users_transaction.receiver_id)
+
+         if current_user == sender.id: 
+            direction = 'outgoing'
+         if current_user == receiver.id:
+            direction = 'incoming'
+
+         if not sender or not receiver:
+               return NotFound(content='Required data not found.')
+         
+         transactions_view.append(TransactionViewAll.transactions_view(users_transaction, sender, receiver, direction))
+      
       return transactions_view
-   
+
    except JWTError:
       raise HTTPException(
          status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,20 +64,21 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       transaction = transactions_service.view_transaction_by_id(transaction_id, current_user)
       sender = user_services.get_user_by_id(transaction.sender_id)
       receiver = user_services.get_user_by_id(transaction.receiver_id)
-      card = cards_services.get_card_by_id(transaction.cards_id)
+      card_holder = cards_services.get_card_by_id(transaction.cards_id)
+      card_number = cards_services.get_card_by_id(transaction.cards_id)
 
-      if current_user == sender: 
+      if current_user == sender.id: 
          direction = 'outgoing'
-      if current_user != sender:
+      if current_user != sender.id:
          direction = 'incoming'
 
-      if not sender or not receiver or not card:
+      if not sender or not receiver or not card_holder or not card_number:
             return NotFound(content='Required data not found.')
       
       if transaction is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction = [TransactionView.transaction_view(transaction, sender, receiver,direction, card)]
+         transaction = [TransactionView.transaction_view(transaction, sender, receiver,direction, card_holder, card_number)]
          return transaction
       
    except JWTError:
