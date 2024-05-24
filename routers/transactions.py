@@ -61,11 +61,11 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
    try:
-      transaction = transactions_service.view_transaction_by_id(transaction_id, current_user)
-      sender = user_services.get_user_by_id(transaction.sender_id)
-      receiver = user_services.get_user_by_id(transaction.receiver_id)
-      card_holder = cards_services.get_card_by_id(transaction.cards_id)
-      card_number = cards_services.get_card_by_id(transaction.cards_id)
+      transaction_view = transactions_service.view_transaction_by_id(transaction_id, current_user)
+      sender = user_services.get_user_by_id(transaction_view.sender_id)
+      receiver = user_services.get_user_by_id(transaction_view.receiver_id)
+      card_holder = cards_services.get_card_by_id(transaction_view.cards_id)
+      card_number = cards_services.get_card_by_id(transaction_view.cards_id)
 
       if current_user == sender.id: 
          direction = 'outgoing'
@@ -75,11 +75,11 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       if not sender or not receiver or not card_holder or not card_number:
             return NotFound(content='Required data not found.')
       
-      if transaction is None:
+      if transaction_view is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction = [TransactionView.transaction_view(transaction, sender, receiver,direction, card_holder, card_number)]
-         return transaction
+         transaction_view = [TransactionView.transaction_view(transaction_view, sender, receiver,direction, card_holder, card_number)]
+         return transaction_view
       
    except JWTError:
       raise HTTPException(
@@ -98,11 +98,33 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
+   try:
+      transaction.transaction_date = datetime.now()
 
-   transaction.transaction_date = datetime.now()
-   transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
+      sender_id = int(transaction.sender_id)
+      receiver_id = int(transaction.receiver_id)
+      card_id = int(transaction.cards_id)
 
-   return transactions_service.add_money_to_users_ballnace(transaction, current_user)
+      transaction_create = transactions_service.add_money_to_users_ballnace(transaction)
+      sender = user_services.get_user_by_id(sender_id)
+      receiver = user_services.get_user_by_id(receiver_id)
+      card_holder = cards_services.get_card_by_id(card_id)
+      card_number = cards_services.get_card_by_id(card_id)
+
+      if current_user == sender.id and current_user == receiver.id: 
+         direction = 'incoming'
+
+      if not sender or not receiver or not card_holder or not card_number:
+            return NotFound(content='Required data not found.')
+      
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+
+      return transaction_create
+
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
 
 @transactions_router.post('/', status_code=201, tags=['Transactions']) 
 def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
