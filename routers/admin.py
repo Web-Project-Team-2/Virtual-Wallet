@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends
 from common import authorization
 from schemas.transactions import TransactionFilters
 from services import admin_services
-from services.user_services import view_user_transactions, pending_transactions
+from services.admin_services import view_user_transactions, pending_transactions
 
 admin_router = APIRouter(prefix='/admin')
 
@@ -52,7 +52,7 @@ def approve_user(email: str, current_user: int = Depends(authorization.get_curre
     return admin_services.approve_user(email)
 
 
-@admin_router.get('/admin/{user_id}', tags=["Admin"])
+@admin_router.get('/transactions/{user_id}', tags=["Admin"])
 def get_user_transactions_(
         user_id: int,
         current_user: int = Depends(authorization.get_current_user),
@@ -66,7 +66,7 @@ def get_user_transactions_(
     return result
 
 
-@admin_router.post('/admin/{user_id}', tags=["Admin"])
+@admin_router.post('/deny/{user_id}', tags=["Admin"])
 def deny_user_pending_transactions(
         user_id: int,
         current_user: int = Depends(authorization.get_current_user)

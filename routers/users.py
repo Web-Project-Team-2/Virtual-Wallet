@@ -13,7 +13,7 @@ from services.user_services import view
 from schemas.user import UserCreate, UserOut, UserLogin, UserInfoUpdate
 from security.password_hashing import verify_password
 from services import user_services
-from services.user_services import view_profile, update_profile, deposit_money, withdraw_money, view_user_transactions, pending_transactions
+from services.user_services import view_profile, update_profile, deposit_money, withdraw_money
 
 users_router = APIRouter(prefix='/users')
 public_router = APIRouter()
@@ -142,30 +142,3 @@ def withdraw(money: WithdrawMoney, current_user: int = Depends(authorization.get
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to withdraw money.")
 
 
-@users_router.get('/admin/{user_id}', tags=["Users"])
-def get_user_transactions_(
-    user_id: int,
-    current_user: int = Depends(authorization.get_current_user),
-    filters: TransactionFilters = Depends()
-):
-    result = view_user_transactions(user_id, current_user, filters)
-
-    if isinstance(result, str):
-        raise HTTPException(status_code=403, detail=result)
-
-    return result
-
-
-@users_router.post('/admin/{user_id}', tags=["Users"])
-def deny_user_pending_transactions(
-        user_id: int,
-        current_user: int = Depends(authorization.get_current_user)
-):
-    result = pending_transactions(current_user, user_id)
-
-    if isinstance(result, str) and result.startswith("Not authorized"):
-        raise HTTPException(status_code=403, detail=result)
-    elif isinstance(result, str):
-        raise HTTPException(status_code=400, detail=result)
-
-    return {"message": result}
