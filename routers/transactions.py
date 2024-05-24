@@ -26,6 +26,7 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
       users_transactions = transactions_service.view_all_transactions(current_user)
       transactions_view = [TransactionViewAll.transactions_view(transaction) for transaction in users_transactions]
       return transactions_view
+   
    except JWTError:
       raise HTTPException(
          status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,13 +50,21 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       sender = user_services.get_user_by_id(transaction.sender_id)
       receiver = user_services.get_user_by_id(transaction.receiver_id)
       card = cards_services.get_card_by_id(transaction.cards_id)
+
+      if current_user == sender: 
+         direction = 'outgoing'
+      if current_user != sender:
+         direction = 'incoming'
+
       if not sender or not receiver or not card:
             return NotFound(content='Required data not found.')
+      
       if transaction is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction = [TransactionView.transaction_view(transaction, sender, receiver, card)]
+         transaction = [TransactionView.transaction_view(transaction, sender, receiver,direction, card)]
          return transaction
+      
    except JWTError:
       raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

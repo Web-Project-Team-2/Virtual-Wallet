@@ -30,10 +30,11 @@ class TransactionView(BaseModel):
     amount: float
     sender_id: str 
     receiver_id: str
+    direction: str
     cards_id: int
 
     @classmethod
-    def transaction_view(cls, transaction,sender, receiver, card):
+    def transaction_view(cls, transaction,sender, receiver, direction, card):
        
         return cls(
             status=transaction.status,
@@ -41,6 +42,7 @@ class TransactionView(BaseModel):
             amount=transaction.amount,
             sender_id=sender.username,
             receiver_id=receiver.username,
+            direction=direction,
             cards_id=card.card_number
         )
 
