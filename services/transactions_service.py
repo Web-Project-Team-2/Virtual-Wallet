@@ -86,13 +86,13 @@ def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
                     (transaction.id,transaction.status, transaction.transaction_date, transaction.amount, transaction.next_payment,
                                 transaction.categories_id, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
      
-     user_ballance = update_query(
-                    '''UPDATE users SET balance = balance + ? WHERE id = ?''',
-                    (transaction.amount, current_user))
+     # user_ballance = update_query(
+     #                '''UPDATE users SET balance = balance + ? WHERE id = ?''',
+     #                (transaction.amount, current_user))
 
      transaction.id = generated_id
 
-     return transaction, user_ballance
+     return transaction
 
 def create_transactions(transaction: Transaction):
      '''
