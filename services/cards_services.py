@@ -1,6 +1,7 @@
 import datetime
-from data.database_queries import insert_query, delete_query
+from data.database_queries import insert_query, delete_query, read_query
 from common.helper_functions import convert_to_datetime
+from data.models.cards import Card
 
 
 def create(card_number: int, card_holder: str, cvv: int, expiration_date: datetime, user_id):
@@ -18,3 +19,9 @@ def delete(card_id: int, user_id: int):
 
     except Exception as e:
         return f"Error deleting debit card {e}"
+    
+def get_card_by_id(card_id: int):
+    card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+                              FROM cards
+                              WHERE id = ?''', (card_id,))
+    return Card.from_query_result(*card_data[0]) if card_data else None

@@ -28,20 +28,20 @@ class TransactionView(BaseModel):
     status: str 
     transaction_date: str
     amount: float
-    sender_id: int 
-    receiver_id: int
+    sender_id: str 
+    receiver_id: str
     cards_id: int
 
     @classmethod
-    def transaction_view(cls, transaction):
+    def transaction_view(cls, transaction,sender, receiver, card):
        
         return cls(
             status=transaction.status,
             transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
             amount=transaction.amount,
-            sender_id=transaction.sender_id,
-            receiver_id=transaction.receiver_id,
-            cards_id=transaction.cards_id
+            sender_id=sender.username,
+            receiver_id=receiver.username,
+            cards_id=card.card_number
         )
 
 

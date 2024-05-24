@@ -242,3 +242,9 @@ def view_user_transactions(user_id: int, current_user: int, filters: Transaction
             "card_id": user_data[5]
         } for user_data in get_user_data
     ]
+
+def get_user_by_id(user_id: int):
+    user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+                              FROM users
+                              WHERE id = ?''', (user_id,))
+    return User.from_query_result(*user_data[0]) if user_data else None

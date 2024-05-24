@@ -4,7 +4,7 @@ from common.responses import BadRequest, NotFound
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, categories_service
+from services import transactions_service, user_services, categories_service, cards_services
 from datetime import datetime
 from typing import List
 
@@ -46,10 +46,15 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
    '''
    try:
       transaction = transactions_service.view_transaction_by_id(transaction_id, current_user)
+      sender = user_services.get_user_by_id(transaction.sender_id)
+      receiver = user_services.get_user_by_id(transaction.receiver_id)
+      card = cards_services.get_card_by_id(transaction.cards_id)
+      if not sender or not receiver or not card:
+            return NotFound(content='Required data not found.')
       if transaction is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction = [TransactionView.transaction_view(transaction)]
+         transaction = [TransactionView.transaction_view(transaction, sender, receiver, card)]
          return transaction
    except JWTError:
       raise HTTPException(
