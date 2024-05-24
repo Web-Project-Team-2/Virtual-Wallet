@@ -44,13 +44,3 @@ def name_exists(name: str):
         return False
 
     return True
-
-
-def find_category_by_id(category_id: int):
-    category_data = read_query(
-        'SELECT id, name FROM categories WHERE id = ?',
-        (category_id,))
-
-    category = next((Category.from_query_result(*row) for row in category_data), None)
-
-    return category

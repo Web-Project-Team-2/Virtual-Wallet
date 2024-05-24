@@ -135,6 +135,29 @@ def approve_transaction(transaction_id: int):
 
      return transaction
 
+def get_user_by_id(user_id: int):
+    user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+                              FROM users
+                              WHERE id = ?''', (user_id,))
+    return User.from_query_result(*user_data[0]) if user_data else None
+
+def find_category_by_id(category_id: int):
+    category_data = read_query(
+        'SELECT id, name FROM categories WHERE id = ?',
+        (category_id,))
+
+    category = next((Category.from_query_result(*row) for row in category_data), None)
+
+    return category
+
+def user_id_exists(user_id: int):
+    return any(read_query(
+        '''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
+               FROM users 
+               WHERE id = ?''',
+        (user_id,)))
+
+
 
 
 
