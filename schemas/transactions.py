@@ -1,6 +1,7 @@
 from pydantic import BaseModel, constr
 from datetime import datetime, timedelta
 from data.models.user import User
+from data.models.cards import Card
 
 
 class TransactionViewAll(BaseModel):
@@ -11,7 +12,7 @@ class TransactionViewAll(BaseModel):
     receiver_id: int
 
     @classmethod
-    def transaction_view(cls, transaction):
+    def transactions_view(cls, transaction):
         return cls(
             status=transaction.status,
             transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
@@ -31,6 +32,7 @@ class TransactionView(BaseModel):
 
     @classmethod
     def transaction_view(cls, transaction):
+       
         return cls(
             status=transaction.status,
             transaction_date=transaction.transaction_date.strftime('%Y/%m/%d %H:%M'),
