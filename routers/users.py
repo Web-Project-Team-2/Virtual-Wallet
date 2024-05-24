@@ -6,11 +6,14 @@ from common.authorization import create_access_token
 from common.helper_functions import check_password
 from common.wallet_info import detailed_info
 from schemas.contact import ContactCreate
+from schemas.deposit import Deposit
+from schemas.transactions import TransactionFilters
+from schemas.withdraw import WithdrawMoney
 from services.user_services import view
-from schemas.user import UserCreate, UserOut, UserLogin
+from schemas.user import UserCreate, UserOut, UserLogin, UserInfoUpdate
 from security.password_hashing import verify_password
 from services import user_services
-from services.user_services import view_profile
+from services.user_services import view_profile, update_profile, deposit_money, withdraw_money, view_user_transactions
 
 users_router = APIRouter(prefix='/users')
 public_router = APIRouter()
@@ -105,3 +108,49 @@ def get_all_contacts(current_user: int = Depends(authorization.get_current_user)
                             detail="Unable to fetch contacts.")
 
     return {"contacts": contacts}
+
+
+@users_router.put('/update', tags=["Users"])
+def update_user_info(user: UserInfoUpdate, current_user: int = Depends(authorization.get_current_user)):
+    check_password(user.password)
+
+    hashed_password = security.password_hashing.get_password_hash(user.password)
+    user.password = hashed_password
+
+    try:
+        update = update_profile(current_user, user.email, user.password, user.phone_number)
+        return update
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to update user information")
+
+
+@users_router.put('/deposit', tags=["Users"])
+def deposit(money: Deposit, current_user: int = Depends(authorization.get_current_user)):
+    try:
+        deposit_update = deposit_money(current_user, money.deposit_money)
+        return deposit_update
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to deposit money.")
+
+
+@users_router.put('/withdraw', tags=["Users"])
+def withdraw(money: WithdrawMoney, current_user: int = Depends(authorization.get_current_user)):
+    try:
+        withdraw_update = withdraw_money(current_user, money.withdraw_money)
+        return withdraw_update
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to withdraw money.")
+
+
+@users_router.get('/admin/{user_id}', tags=["Users"])
+def get_user_transactions_(
+    user_id: int,
+    current_user: int = Depends(authorization.get_current_user),
+    filters: TransactionFilters = Depends()
+):
+    result = view_user_transactions(user_id, current_user, filters)
+
+    if isinstance(result, str):
+        raise HTTPException(status_code=403, detail=result)
+
+    return result

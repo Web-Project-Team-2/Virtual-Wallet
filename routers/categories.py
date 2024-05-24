@@ -7,13 +7,19 @@ from http import HTTPStatus
 categories_router = APIRouter(prefix="/categories")
 
 
-@categories_router.get('/')
+@categories_router.get('/', tags=["Categories"])
 def get_categories(search: str = None, sort_by: str = None, page: int = 1, size: int = 10):
+    '''
+         This function returns all the available categories.
+    '''
     return categories_service.get_all(search, sort_by, page, size)
 
 
-@categories_router.post('/', status_code=201)
+@categories_router.post('/', status_code=201, tags=["Categories"])
 def create_category(category: Category, current_user: int = Depends(authorization.get_current_user)):
+    '''
+             This function creates new category. To create category you should be registered and logged.
+    '''
     if current_user is None:
         raise HTTPStatus.FORBIDDEN
     if categories_service.name_exists(category.name):

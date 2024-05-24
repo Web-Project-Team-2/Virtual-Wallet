@@ -1,12 +1,13 @@
+import datetime
 from typing import Optional
 from mariadb import IntegrityError
 import security.password_hashing
 from common.helper_functions import convert_to_datetime
-from data.database_queries import insert_query, read_query, delete_query
+from data.database_queries import insert_query, read_query, delete_query, update_query
 from data.models.cards import Card
 from data.models.user import User
 from schemas.cards import ViewCard
-from schemas.transactions import TransactionView
+from schemas.transactions import TransactionView, TransactionFilters
 from schemas.user import UserInfo
 
 
@@ -144,3 +145,100 @@ def get_all_contacts(user_id: int) -> Optional[list]:
     except Exception as e:
         print(f"Error fetching contacts: {e}")
         return None
+
+
+def update_profile(user_id: int, email: str, password: str, phone_number: str):
+    update_result = update_query(
+        'UPDATE users SET email = %s, password = %s, phone_number = %s WHERE id = %s',
+        (email, password, phone_number, user_id))
+
+    if update_result:
+        result = "User information updated successfully"
+    else:
+        result = "Failed to update user information"
+
+    return result
+
+
+def deposit_money(user_id: int, balance: int):
+    if balance < 25:
+        return f"Minimum deposit is $25."
+
+    get_user_balance = read_query('SELECT balance from users WHERE id=?', (user_id,))
+    new_balance = balance + get_user_balance[0][0]
+
+    update_result = update_query(
+        'UPDATE users SET balance = %s WHERE id = %s',
+        (new_balance, user_id))
+
+    if update_result:
+        return f"You have successfully deposited ${balance} into your virtual wallet."
+    else:
+        return f"Unable to deposit ${balance} into your account."
+
+
+def withdraw_money(user_id: int, withdraw: int):
+    get_user_balance = read_query('SELECT balance from users WHERE id=?', (user_id,))
+
+    if withdraw > get_user_balance[0][0]:
+        return "Unable to withdraw. You don't have enough cash in your virtual wallet."
+    new_balance = get_user_balance[0][0] - withdraw
+
+    update_result = update_query(
+        'UPDATE users SET balance = %s WHERE id = %s',
+        (new_balance, user_id))
+
+    if update_result:
+        return f"You have successfully withdraw ${withdraw} from your virtual wallet."
+    else:
+        return f"Unable to withdraw ${withdraw} into your account."
+
+
+def view_user_transactions(user_id: int, current_user: int, filters: TransactionFilters):
+    admin_status = read_query('SELECT is_admin FROM users WHERE id=?', (current_user,))
+
+    if not admin_status or not admin_status[0][0]:
+        return "Not authorized. Must be an admin"
+
+    query = """
+        SELECT status, transaction_date, amount, sender_id, receiver_id, cards_id 
+        FROM transactions 
+        WHERE (sender_id=? OR receiver_id=?)
+    """
+    params = [user_id, user_id]
+
+    if filters.start_date:
+        query += " AND transaction_date >= ?"
+        params.append(filters.start_date)
+    if filters.end_date:
+        query += " AND transaction_date <= ?"
+        params.append(filters.end_date)
+    if filters.sender_id:
+        query += " AND sender_id = ?"
+        params.append(filters.sender_id)
+    if filters.recipient_id:
+        query += " AND receiver_id = ?"
+        params.append(filters.recipient_id)
+    if filters.direction:
+        if filters.direction == 'incoming':
+            query += " AND receiver_id = ?"
+            params.append(user_id)
+        elif filters.direction == 'outgoing':
+            query += " AND sender_id = ?"
+            params.append(user_id)
+
+    query += f" ORDER BY {filters.sort_by} {filters.sort_order} LIMIT ? OFFSET ?"
+    params.extend([filters.limit, filters.offset])
+
+    get_user_data = read_query(query, params)
+
+    return [
+        {
+            "status": user_data[0],
+            "transaction_date": user_data[1],
+            "amount": user_data[2],
+            "sender_id": user_data[3],
+            "receiver_id": user_data[4],
+            "card_id": user_data[5]
+        } for user_data in get_user_data
+    ]
