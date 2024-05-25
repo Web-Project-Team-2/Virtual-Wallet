@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from jose import JWTError
 from common.responses import BadRequest, NotFound
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, categories_service, cards_services
+from services import transactions_service
 from datetime import datetime
 from typing import List
 
@@ -13,7 +13,11 @@ transactions_router = APIRouter(prefix='/transactions')
 
 
 @transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
-def get_users_transactions(current_user: int = Depends(get_current_user)):
+def get_users_transactions(sort: str | None = None, sort_by: str | None = None, 
+                           page: int = Query(1, gt=0), transactions_per_page: int = Query(10, gt=0), 
+                           date: str | None = None, direction: str | None = None,
+                           sender: int | None = None, receiver: int | None = None,
+                           current_user: int = Depends(get_current_user)):
    '''
    This function returns a list of all the transactions for the specified user.\n
 
@@ -27,8 +31,8 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
 
       transactions_view = []
       for users_transaction in users_transactions:
-         sender = user_services.get_user_by_id(users_transaction.sender_id)
-         receiver = user_services.get_user_by_id(users_transaction.receiver_id)
+         sender = transactions_service.get_user_by_id(users_transaction.sender_id)
+         receiver = transactions_service.get_user_by_id(users_transaction.receiver_id)
 
          if current_user == sender.id: 
             direction = 'outgoing'
@@ -40,7 +44,16 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
          
          transactions_view.append(TransactionViewAll.transactions_view(users_transaction, sender, receiver, direction))
       
-      return transactions_view
+      start = (page - 1) * transactions_per_page
+      end = start + transactions_per_page
+      transactions_view = transactions_view[start:end]
+
+      if sort and (sort == 'asc' or sort == 'desc'):
+         return transactions_service.sort_transactions(transactions_view, reverse=sort == 'desc', attribute=sort_by)
+      else:
+         return transactions_view
+
+      # return transactions_view
 
    except JWTError:
       raise HTTPException(
@@ -62,10 +75,10 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
    '''
    try:
       transaction_view = transactions_service.view_transaction_by_id(transaction_id, current_user)
-      sender = user_services.get_user_by_id(transaction_view.sender_id)
-      receiver = user_services.get_user_by_id(transaction_view.receiver_id)
-      card_holder = cards_services.get_card_by_id(transaction_view.cards_id)
-      card_number = cards_services.get_card_by_id(transaction_view.cards_id)
+      sender = transactions_service.get_user_by_id(transaction_view.sender_id)
+      receiver = transactions_service.get_user_by_id(transaction_view.receiver_id)
+      card_holder = transactions_service.get_card_by_id(transaction_view.cards_id)
+      card_number = transactions_service.get_card_by_id(transaction_view.cards_id)
 
       if current_user == sender.id: 
          direction = 'outgoing'
@@ -106,10 +119,10 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
       card_id = int(transaction.cards_id)
 
       transaction_create = transactions_service.add_money_to_users_ballnace(transaction)
-      sender = user_services.get_user_by_id(sender_id)
-      receiver = user_services.get_user_by_id(receiver_id)
-      card_holder = cards_services.get_card_by_id(card_id)
-      card_number = cards_services.get_card_by_id(card_id)
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_holder = transactions_service.get_card_by_id(card_id)
+      card_number = transactions_service.get_card_by_id(card_id)
 
       if current_user == sender.id and current_user == receiver.id: 
          direction = 'incoming'
@@ -142,8 +155,8 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
    transaction.transaction_date = datetime.now()
    transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
 
-   transaction.receiver_id = user_services.user_id_exists(transaction.receiver_id)
-   transaction.categories_id = categories_service.find_category_by_id(transaction.categories_id)
+   transaction.receiver_id = transactions_service.user_id_exists(transaction.receiver_id)
+   transaction.categories_id = transactions_service.get_category_by_id(transaction.categories_id)
 
    if transaction.receiver_id and transaction.categories_id:
       return transactions_service.create_transactions(transaction)

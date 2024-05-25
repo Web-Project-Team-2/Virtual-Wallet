@@ -1,5 +1,7 @@
 from data.models.transactions import Transaction
 from data.models.user import User
+from data.models.cards import Card
+from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
 from schemas.transactions import TransactionViewAll
 from common.responses import Unauthorized, NotFound, BadRequest
@@ -32,6 +34,16 @@ def view_all_transactions(current_user: int):
           transactions_data.append(transaction)
 
      return transactions_data
+
+
+def sort_transactions(transactions: list[Transaction], *, attribute='transaction_date', reverse=False):
+     if attribute == 'transaction_date':
+          def sort_fn(t: Transaction): return t.transaction_date
+     if attribute == 'amount':
+          def sort_fn(t: Transaction): return t.amount
+     
+     return sorted(transactions, key=sort_fn, reverse=reverse)
+
 
 def view_transaction_by_id(transaction_id: int, current_user: int):
      '''
@@ -135,13 +147,18 @@ def approve_transaction(transaction_id: int):
 
      return transaction
 
+
 def get_user_by_id(user_id: int):
     user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
                               FROM users
                               WHERE id = ?''', (user_id,))
-    return User.from_query_result(*user_data[0]) if user_data else None
+    
+    user = next((User.from_query_result(*row) for row in user_data), None)
 
-def find_category_by_id(category_id: int):
+    return user
+
+
+def get_category_by_id(category_id: int):
     category_data = read_query(
         'SELECT id, name FROM categories WHERE id = ?',
         (category_id,))
@@ -150,14 +167,23 @@ def find_category_by_id(category_id: int):
 
     return category
 
+
+def get_card_by_id(card_id: int):
+    card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+                              FROM cards
+                              WHERE id = ?''', (card_id,))
+    
+    card = next((Card.from_query_result(*row) for row in card_data), None)
+
+    return card
+
+
 def user_id_exists(user_id: int):
     return any(read_query(
         '''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
                FROM users 
                WHERE id = ?''',
         (user_id,)))
-
-
 
 
 
