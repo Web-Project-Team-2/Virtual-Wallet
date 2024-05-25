@@ -94,14 +94,6 @@ def view_profile(user_id: int):
     return result
 
 
-def user_id_exists(user_id: int):
-    return any(read_query(
-        '''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
-               FROM users 
-               WHERE id = ?''',
-        (user_id,)))
-
-
 def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
     try:
         insert_query(

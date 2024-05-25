@@ -5,7 +5,7 @@ from datetime import datetime
 class Transaction(BaseModel):
     id: int | None = None
     status: str = 'pending'
-    transaction_date: datetime 
+    transaction_date: datetime | None = None
     amount: float
     sender_id: int | None = None
     receiver_id: int
