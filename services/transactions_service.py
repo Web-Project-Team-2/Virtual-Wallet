@@ -6,7 +6,7 @@ from data.database_queries import read_query, insert_query, update_query
 from schemas.transactions import TransactionViewAll
 from common.responses import Unauthorized, NotFound, BadRequest
 
-def view_all_transactions(current_user: int):
+def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
      '''
      This function returns a list of all the transactions for the authenticated user.
 
@@ -16,24 +16,44 @@ def view_all_transactions(current_user: int):
           This parameter is used to ensure that the request is made by an authenticated user.
 
      '''
-     transactions_out = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+     # sql = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+     #          FROM transactions'''
+
+     # filter_by = [f'(sender_id = {current_user} OR receiver_id = {current_user})']
+
+     # if transaction_date:
+     #      filter_by .append(f"DATE(transaction_date) = '{transaction_date}'")
+     # if sender:
+     #      filter_by .append(f"sender_id = {sender}")
+     # if receiver:
+     #      filter_by .append(f"receiver_id = {receiver}")
+     # if direction:
+     #      if direction == 'outgoing':
+     #           filter_by .append(f"sender_id = {current_user}")
+     #      elif direction == 'incoming':
+     #           filter_by .append(f"receiver_id = {current_user}")
+
+     # if filter_by :
+     #      sql += ' WHERE ' + ' AND '.join(filter_by)
+
+     transactions_outgoing = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                           FROM transactions
                                           WHERE sender_id = ?''',
                                    (current_user,))
      
-     transactions_in = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+     transactions_incoming = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                          FROM transactions
                                          WHERE receiver_id = ?''',
                                    (current_user,))
      
-     transactions_all = transactions_out + transactions_in
+     transactions = transactions_outgoing + transactions_incoming
 
-     transactions_data = []
-     for row in transactions_all:
+     transactions_all = []
+     for row in transactions:
           transaction = Transaction.from_query_result(*row)
-          transactions_data.append(transaction)
+          transactions_all.append(transaction)
 
-     return transactions_data
+     return transactions_all
 
 
 def sort_transactions(transactions: list[Transaction], *, attribute='transaction_date', reverse=False):
@@ -57,18 +77,18 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
         The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
         This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     transactions_out = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+     transactions_out = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                           FROM transactions
                                           WHERE sender_id = ?''',
                                    (current_user,))
-     transactions_in = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+     transactions_in = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                          FROM transactions
                                          WHERE receiver_id = ?''',
                                   (current_user,))
      transactions_all = transactions_out + transactions_in
 
      if transactions_all:
-          transaction_by_id = read_query('''SELECT id, status, transaction_date, amount, sender_id, receiver_id, cards_id
+          transaction_by_id = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                                 FROM transactions
                                                 WHERE id = ?''',
                                          (transaction_id,))
@@ -93,10 +113,10 @@ def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
         This parameter is used to ensure that the request is made by an authenticated user.
      '''
      generated_id = insert_query(
-                    '''INSERT INTO transactions(id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id) 
+                    '''INSERT INTO transactions(id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                            VALUES(?,?,?,?,?,?,?,?,?)''',
-                    (transaction.id,transaction.status, transaction.transaction_date, transaction.amount, transaction.next_payment,
-                                transaction.categories_id, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+                    (transaction.id,transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
+                                transaction.category_name, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
      
      # user_ballance = update_query(
      #                '''UPDATE users SET balance = balance + ? WHERE id = ?''',
@@ -115,10 +135,10 @@ def create_transactions(transaction: Transaction):
         The transaction details to be added to the user's wallet.
      '''
      generated_id = insert_query(
-                    '''INSERT INTO transactions(id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id) 
+                    '''INSERT INTO transactions(id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                            VALUES(?,?,?,?,?,?,?,?,?)''',
-                    (transaction.id,transaction.status, transaction.transaction_date, transaction.amount, transaction.next_payment,
-                                transaction.categories_id, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+                    (transaction.id,transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
+                                transaction.category_name, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
 
      transaction.id = generated_id
 
@@ -130,13 +150,13 @@ def transaction_id_exists(transaction_id: int):
      '''
      return any(
      read_query(
-          '''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id 
+          '''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                  FROM transactions 
                  WHERE id = ?''',
           (transaction_id,)))
 
 def approve_transaction(transaction_id: int):
-     transactions = read_query('''SELECT id, status, transaction_date, amount, next_payment, categories_id, sender_id, receiver_id, cards_id
+     transactions = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
                                (transaction_id,))

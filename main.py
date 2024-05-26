@@ -9,6 +9,7 @@ from routers.cards import cards_router
 from routers.categories import categories_router
 from routers.users import users_router, public_router
 from routers.transactions import transactions_router
+from routers.recurring_transactions import recurring_transactions_router
 import uvicorn
 
 
@@ -17,6 +18,7 @@ app = FastAPI()
 app.include_router(categories_router)
 app.include_router(users_router)
 app.include_router(transactions_router)
+app.include_router(recurring_transactions_router)
 app.include_router(cards_router)
 app.include_router(public_router)
 app.include_router(admin_router)
