@@ -8,52 +8,70 @@ from common.responses import Unauthorized, NotFound, BadRequest
 
 def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
      '''
-     This function returns a list of all the transactions for the authenticated user.
-
-     Parameters:
-     current_user : int
-          The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
-          This parameter is used to ensure that the request is made by an authenticated user.
-
+     This function returns a list of all the transactions for the specified user.\n
+     Parameters:\n
+     - sort: str | None\n
+          - The sort order of the transactions. Acceptable values are 'asc' for ascending or 'desc' for descending.\n
+     - sort_by: str | None\n
+          - The attributes to sort the transactions are 'transaction_date' and 'amount'.\n
+     - page: int | None\n
+          - The page number to retrieve. If not specified, all transactions are returned.\n
+     - transactions_per_page: int\n
+          - The number of transactions per page. Default is 5.\n
+     - transaction_date: str | None\n
+          - Filter transactions by a specific date.\n
+     - direction: str | None\n
+          - Filter transactions by direction ('incoming' or 'outgoing').\n
+     - sender: int | None\n
+          - Filter transactions by the sender's user ID.\n
+     - receiver: int | None\n
+          - Filter transactions by the receiver's user ID.\n
+     - current_user: int\n
+          - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+          - This parameter is used to ensure that the request is made by an authenticated user.\n
      '''
-     # sql = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
-     #          FROM transactions'''
+     if transaction_date or sender or receiver or direction:
+          sql = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+               FROM transactions'''
 
-     # filter_by = [f'(sender_id = {current_user} OR receiver_id = {current_user})']
+          filter_by = []
 
-     # if transaction_date:
-     #      filter_by .append(f"DATE(transaction_date) = '{transaction_date}'")
-     # if sender:
-     #      filter_by .append(f"sender_id = {sender}")
-     # if receiver:
-     #      filter_by .append(f"receiver_id = {receiver}")
-     # if direction:
-     #      if direction == 'outgoing':
-     #           filter_by .append(f"sender_id = {current_user}")
-     #      elif direction == 'incoming':
-     #           filter_by .append(f"receiver_id = {current_user}")
+          if transaction_date:
+               filter_by.append(f'transaction_date like "%{transaction_date}%"')
+          if sender:
+               filter_by.append(f'sender_id like "%{sender}%"')
+          if receiver:
+               filter_by.append(f'receiver_id like "%{receiver}%"')
+          if direction:
+               if direction == 'outgoing' and current_user == receiver:
+                    filter_by.append(f'sender_id like "%{current_user}%"')
+               elif direction == 'incoming':
+                    filter_by.append(f'receiver_id like "%{current_user}%"')
 
-     # if filter_by :
-     #      sql += ' WHERE ' + ' AND '.join(filter_by)
-
-     transactions_outgoing = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
-                                          FROM transactions
-                                          WHERE sender_id = ?''',
-                                   (current_user,))
+          if filter_by:
+               sql += ' WHERE ' + ' AND '.join(filter_by)
+          
+          return (Transaction.from_query_result(*row) for row in read_query(sql))
      
-     transactions_incoming = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
-                                         FROM transactions
-                                         WHERE receiver_id = ?''',
-                                   (current_user,))
-     
-     transactions = transactions_outgoing + transactions_incoming
+     else:
+          transactions_incoming = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                             FROM transactions
+                                             WHERE receiver_id = ?''',
+                                        (current_user,))
+          
+          transactions_outgoing = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                             FROM transactions
+                                             WHERE sender_id = ?''',
+                                        (current_user,))
+          transactions = transactions_incoming + transactions_outgoing
 
-     transactions_all = []
-     for row in transactions:
-          transaction = Transaction.from_query_result(*row)
-          transactions_all.append(transaction)
+          transactions_all = []
+          for row in transactions:
+               transaction = Transaction.from_query_result(*row)
+               if transaction not in transactions_all:
+                    transactions_all.append(transaction)
 
-     return transactions_all
+          return transactions_all
 
 
 def sort_transactions(transactions: list[Transaction], *, attribute='transaction_date', reverse=False):
@@ -67,15 +85,13 @@ def sort_transactions(transactions: list[Transaction], *, attribute='transaction
 
 def view_transaction_by_id(transaction_id: int, current_user: int):
      '''
-     This finction returns a more detailed information about a user's transactions.
-
-     Parameters:
-     transaction_id : int
-        The ID of the transaction to retrieve details for.
-
-     current_user : int
-        The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
-        This parameter is used to ensure that the request is made by an authenticated user.
+     This function returns a more detailed information about a user's transactions.\n
+   Parameters:\n
+   - transaction_id : int\n
+      - The ID of the transaction to retrieve details for.\n
+   - current_user : int\n
+      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+      - This parameter is used to ensure that the request is made by an authenticated user.
      '''
      transactions_out = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                           FROM transactions

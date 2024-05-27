@@ -14,34 +14,33 @@ transactions_router = APIRouter(prefix='/transactions')
 
 @transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
 def get_users_transactions(sort: str | None = None, sort_by: str | None = None, 
-                           page: int = Query(None, gt=0), transactions_per_page: int = Query(10, gt=0), 
+                           page: int = Query(None, gt=0), transactions_per_page: int = Query(5, gt=0), 
                            transaction_date: str | None = None, 
                            direction: str | None = None,
                            sender: int | None = None, receiver: int | None = None,
                            current_user: int = Depends(get_current_user)):
    '''
    This function returns a list of all the transactions for the specified user.\n
-
-    Parameters:\n
-    - sort: str | None\n
-        The sort order of the transactions. Acceptable values are 'asc' for ascending or 'desc' for descending.\n
-    - sort_by: str | None\n
-        The attribute to sort the transactions 'transaction_date' and 'amount'.\n
-    - page: int | None\n
-        The page number to retrieve. If not specified, all transactions are returned.\n
-    - transactions_per_page: int\n
-        The number of transactions per page. Default is 10.\n
-    - transaction_date: str | None\n
-        Filter transactions by a specific date.\n
-    - direction: str | None\n
-        Filter transactions by direction ('incoming' or 'outgoing').\n
-    - sender: int | None\n
-        Filter transactions by the sender's user ID.\n
-    - receiver: int | None\n
-        Filter transactions by the receiver's user ID.\n
-    - current_user: int\n
-        The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-        This parameter is used to ensure that the request is made by an authenticated user.\n
+   Parameters:\n
+   - sort: str | None\n
+      - The sort order of the transactions. Acceptable values are 'asc' for ascending or 'desc' for descending.\n
+   - sort_by: str | None\n
+      - The attributes to sort the transactions are 'transaction_date' and 'amount'.\n
+   - page: int | None\n
+      - The page number to retrieve. If not specified, all transactions are returned.\n
+   - transactions_per_page: int\n
+      - The number of transactions per page. Default is 5.\n
+   - transaction_date: str | None\n
+      - Filter transactions by a specific date.\n
+   - direction: str | None\n
+      - Filter transactions by direction ('incoming' or 'outgoing').\n
+   - sender: int | None\n
+      - Filter transactions by the sender's user ID.\n
+   - receiver: int | None\n
+      - Filter transactions by the receiver's user ID.\n
+   - current_user: int\n
+      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+      - This parameter is used to ensure that the request is made by an authenticated user.\n
    ''' 
    try:
       users_transactions = transactions_service.view_all_transactions(current_user, transaction_date, sender, receiver, direction)
@@ -55,7 +54,7 @@ def get_users_transactions(sort: str | None = None, sort_by: str | None = None,
             direction = 'outgoing'
          if current_user == receiver.id:
             direction = 'incoming'
-
+            
          if not sender or not receiver:
                return NotFound(content='Required data not found.')
          
@@ -78,10 +77,9 @@ def get_users_transactions(sort: str | None = None, sort_by: str | None = None,
 
 
 @transactions_router.get('/id/{transaction_id}', response_model=List[TransactionView], status_code=201, tags=['Transactions']) 
-def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
+def get_transaction_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
    '''
    This function returns a more detailed information about a user's transactions.\n
-
    Parameters:\n
    - transaction_id : int\n
       - The ID of the transaction to retrieve details for.\n
@@ -93,21 +91,19 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
       transaction_view = transactions_service.view_transaction_by_id(transaction_id, current_user)
       sender = transactions_service.get_user_by_id(transaction_view.sender_id)
       receiver = transactions_service.get_user_by_id(transaction_view.receiver_id)
-      card_holder = transactions_service.get_card_by_id(transaction_view.cards_id)
-      card_number = transactions_service.get_card_by_id(transaction_view.cards_id)
 
       if current_user == sender.id: 
          direction = 'outgoing'
       if current_user != sender.id:
          direction = 'incoming'
 
-      if not sender or not receiver or not card_holder or not card_number:
+      if not sender or not receiver:
             return NotFound(content='Required data not found.')
       
       if transaction_view is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction_view = [TransactionView.transaction_view(transaction_view, sender, receiver,direction, card_holder, card_number)]
+         transaction_view = [TransactionView.transaction_view(transaction_view, sender, receiver,direction)]
          return transaction_view
       
    except JWTError:
@@ -118,8 +114,8 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
 
 @transactions_router.post('/wallet', status_code=201, tags=['Transactions']) 
 def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
-   '''This function makes a transaction to the user wallet's ballance.\n
-
+   '''
+   This function makes a transaction to the user wallet's ballance.\n
    Parameters:\n
    - transaction : Transaction\n
       - The transaction details to be added to the user's wallet.\n
