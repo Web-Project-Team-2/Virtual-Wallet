@@ -77,18 +77,18 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
         The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
         This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     transactions_out = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+     transactions_out = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                           FROM transactions
                                           WHERE sender_id = ?''',
                                    (current_user,))
-     transactions_in = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+     transactions_in = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                          FROM transactions
                                          WHERE receiver_id = ?''',
                                   (current_user,))
      transactions_all = transactions_out + transactions_in
 
      if transactions_all:
-          transaction_by_id = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+          transaction_by_id = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                                 FROM transactions
                                                 WHERE id = ?''',
                                          (transaction_id,))
@@ -102,7 +102,7 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
      else:
           return transaction 
 
-def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
+def create_transaction_to_users_ballnace(transaction: Transaction, current_user: int):
      '''This function makes a transaction to the user wallet's ballance.
 
      Parameters:
@@ -112,11 +112,17 @@ def add_money_to_users_ballnace(transaction: Transaction, current_user: int):
         The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
         This parameter is used to ensure that the request is made by an authenticated user.
      '''
+     sender_id = current_user
+     receiver_id = current_user
+     cards_user_id = current_user
+
+     card_id = get_card_by_user_id(cards_user_id)
+     
      generated_id = insert_query(
-                    '''INSERT INTO transactions(id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
+                    '''INSERT INTO transactions(id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                            VALUES(?,?,?,?,?,?,?,?,?)''',
-                    (transaction.id,transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
-                                transaction.category_name, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+                    (transaction.id, transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
+                                transaction.category_name, sender_id, receiver_id, card_id))
      
      # user_ballance = update_query(
      #                '''UPDATE users SET balance = balance + ? WHERE id = ?''',
@@ -197,6 +203,17 @@ def get_card_by_id(card_id: int):
 
     return card
 
+def get_card_by_user_id(cards_user_id: int):
+    card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+                              FROM cards
+                              WHERE user_id = ?''', (cards_user_id,))
+    
+    card = next((Card.from_query_result(*row) for row in card_data), None)
+
+    card_id = card.id
+
+    return card_id
+
 
 def user_id_exists(user_id: int):
     return any(read_query(
@@ -204,6 +221,3 @@ def user_id_exists(user_id: int):
                FROM users 
                WHERE id = ?''',
         (user_id,)))
-
-
-

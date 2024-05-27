@@ -117,7 +117,7 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
    
 
 @transactions_router.post('/wallet', status_code=201, tags=['Transactions']) 
-def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
+def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''This function makes a transaction to the user wallet's ballance.\n
 
    Parameters:\n
@@ -130,13 +130,15 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
    try:
       transaction.transaction_date = datetime.now()
 
-      sender_id = int(transaction.sender_id)
-      receiver_id = int(transaction.receiver_id)
-      card_id = int(transaction.cards_id)
+      sender_id = current_user
+      receiver_id = current_user
+      cards_user_id = current_user
 
-      transaction_create = transactions_service.add_money_to_users_ballnace(transaction)
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
       card_holder = transactions_service.get_card_by_id(card_id)
       card_number = transactions_service.get_card_by_id(card_id)
 
@@ -155,7 +157,50 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Your session has expired. Please log in again to continue using the application.')
 
-@transactions_router.post('/', status_code=201, tags=['Transactions']) 
+
+@transactions_router.post('/user', status_code=201, tags=['Transactions']) 
+def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
+   '''This function makes a transaction to the user wallet's ballance.\n
+
+   Parameters:\n
+   - transaction : Transaction\n
+      - The transaction details to be added to the user's wallet.\n
+   - current_user: int\n
+      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+      - This parameter is used to ensure that the request is made by an authenticated user.
+   '''
+   try:
+      transaction.transaction_date = datetime.now()
+
+      sender_id = current_user
+      receiver_id = transaction.receiver_id
+      cards_user_id = receiver_id
+
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
+      card_holder = transactions_service.get_card_by_id(card_id)
+      card_number = transactions_service.get_card_by_id(card_id)
+
+      if current_user == sender.id: 
+         direction = 'outgoing'
+
+      if not sender or not receiver or not card_holder or not card_number:
+            return NotFound(content='Required data not found.')
+      
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+
+      return transaction_create
+
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
+   
+
+@transactions_router.post('/category', status_code=201, tags=['Transactions']) 
 def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''
    This function makes a transaction to another user or category.\n
@@ -167,15 +212,35 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
+   try:
+      transaction.transaction_date = datetime.now()
 
-   transaction.transaction_date = datetime.now()
-   transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
+      sender_id = current_user
+      receiver_id = transaction.receiver_id
+      cards_user_id = receiver_id
 
-   transaction.receiver_id = transactions_service.user_id_exists(transaction.receiver_id)
-   transaction.categories_id = transactions_service.get_category_by_id(transaction.categories_id)
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
 
-   if transaction.receiver_id and transaction.categories_id:
-      return transactions_service.create_transactions(transaction)
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
+      card_holder = transactions_service.get_card_by_id(card_id)
+      card_number = transactions_service.get_card_by_id(card_id)
+
+      if current_user == sender.id: 
+         direction = 'outgoing'
+
+      if not sender or not receiver or not card_holder or not card_number:
+            return NotFound(content='Required data not found.')
+      
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+
+      return transaction_create
+
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
 
 @transactions_router.put('/approval/id/{transaction_id}', status_code=201, tags=['Transactions'])  
 def approve_a_transaction(transaction_id: int, current_user: int = Depends(get_current_user)):
