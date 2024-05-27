@@ -92,9 +92,11 @@ def get_transaction_by_id(transaction_id: int, current_user: int = Depends(get_c
       sender = transactions_service.get_user_by_id(transaction_view.sender_id)
       receiver = transactions_service.get_user_by_id(transaction_view.receiver_id)
 
+      if current_user == sender.id and current_user == receiver.id:
+         direction = 'incoming'
       if current_user == sender.id: 
          direction = 'outgoing'
-      if current_user != sender.id:
+      if current_user == receiver.id:
          direction = 'incoming'
 
       if not sender or not receiver:
@@ -135,16 +137,14 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
       card_id = transactions_service.get_card_by_user_id(cards_user_id)
-      card_holder = transactions_service.get_card_by_id(card_id)
-      card_number = transactions_service.get_card_by_id(card_id)
-
+ 
       if current_user == sender.id and current_user == receiver.id: 
          direction = 'incoming'
 
-      if not sender or not receiver or not card_holder or not card_number:
+      if not sender or not receiver:
             return NotFound(content='Required data not found.')
       
-      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction)]
 
       return transaction_create
 
@@ -238,8 +238,8 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Your session has expired. Please log in again to continue using the application.')
 
-@transactions_router.put('/approval/id/{transaction_id}', status_code=201, tags=['Transactions'])  
-def approve_a_transaction(transaction_id: int, current_user: int = Depends(get_current_user)):
+@transactions_router.put('/preview/id/{transaction_id}', status_code=201, tags=['Transactions'])  
+def preview_transaction(transaction_id: int, transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''
    This function confirmes or declines a transaction.\n
 
@@ -250,8 +250,42 @@ def approve_a_transaction(transaction_id: int, current_user: int = Depends(get_c
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
-   if not transactions_service.transaction_id_exists(transaction_id):
-      return BadRequest(content=f'Transaction {transaction_id} does not exist.')
+   try:
+      sender = transactions_service.get_user_by_id(transaction.sender_id)
+      receiver = transactions_service.get_user_by_id(transaction.receiver_id)
 
-   transaction = transactions_service.approve_transaction(transaction_id)
-   return transaction
+      if current_user == sender.id and current_user == receiver.id:
+         direction = 'incoming'
+      elif current_user == sender.id and current_user != receiver.id: 
+         direction = 'outgoing'
+      elif current_user == receiver.id:
+         direction = 'incoming'
+
+      if not transactions_service.transaction_id_exists(transaction_id):
+         return BadRequest(content=f'Transaction {transaction_id} does not exist.')
+
+      condition_action = transaction.condition
+      
+      if condition_action == 'edited':
+         new_amount = transaction.amount
+         category_name = transaction.category_name
+         receiver_id = transaction.receiver_id
+         if new_amount:
+            transaction_edit = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+         elif category_name:
+            pass
+         elif receiver_id:
+            pass
+      if condition_action == 'sent':
+         amount = transaction.amount
+         status = 'confirmed'
+         transaction_edit = transactions_service.preview_sent_transaction(transaction_id, amount, status, current_user)
+
+      transaction_view = [TransactionView.transaction_view(transaction_edit, sender, receiver,direction)]
+
+      return transaction_view
+   
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')

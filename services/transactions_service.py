@@ -172,23 +172,74 @@ def transaction_id_exists(transaction_id: int):
      '''
      return any(
      read_query(
-          '''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+          '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                  FROM transactions 
                  WHERE id = ?''',
           (transaction_id,)))
 
-def approve_transaction(transaction_id: int):
-     transactions = read_query('''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+def preview_edited_transaction(transaction_id: int, new_amount: float):
+     transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
                                (transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
-     update_query('UPDATE transactions SET status=%s WHERE id = %s',
-                 (transaction_id))
 
-     return transaction
+     if transaction is None:
+        return None 
 
+     if new_amount:
+          updated_transaction = update_query('UPDATE transactions SET amount = ? WHERE id = ?',
+                                (new_amount, transaction_id))
+     
+     updated_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     updated_transaction = next((Transaction.from_query_result(*row) for row in updated_transactions), None)
+
+     return updated_transaction
+
+def preview_sent_transaction(transaction_id: int, amount: float, status: str, current_user: int):
+     transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+
+     if transaction is None:
+        return None 
+
+     sender_id = transaction.sender_id
+     receiver_id = transaction.receiver_id
+     cards_id = transaction.cards_id
+
+     updated_transaction = update_query('UPDATE transactions SET amount = ?, status = ? WHERE id = ?',
+                                        (amount, status, transaction_id))
+     
+     # updated_card_balance
+     update_query('UPDATE cards SET balance = balance + ? WHERE id = ?',
+                                         (amount, cards_id))
+     
+     if current_user == sender_id and current_user != receiver_id:
+          # updated_user_balance
+          update_query('UPDATE users SET balance = balance - ? WHERE id = ?',
+                                              (amount, sender_id))
+     if current_user == sender_id and current_user == receiver_id:
+          # updated_user_balance
+          update_query('UPDATE users SET balance = balance + ? WHERE id = ?',
+                                              (amount, receiver_id))
+
+     updated_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     updated_transaction = next((Transaction.from_query_result(*row) for row in updated_transactions), None)
+
+     return updated_transaction
 
 def get_user_by_id(user_id: int):
     user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
