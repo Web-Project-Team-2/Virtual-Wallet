@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from jose import JWTError
 from common.responses import BadRequest, NotFound
 from common.authorization import get_current_user
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, categories_service, cards_services
+from services import transactions_service
 from datetime import datetime
 from typing import List
 
@@ -13,34 +13,62 @@ transactions_router = APIRouter(prefix='/transactions')
 
 
 @transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
-def get_users_transactions(current_user: int = Depends(get_current_user)):
+def get_users_transactions(sort: str | None = None, sort_by: str | None = None, 
+                           page: int = Query(None, gt=0), transactions_per_page: int = Query(5, gt=0), 
+                           transaction_date: str | None = None, 
+                           direction: str | None = None,
+                           sender: int | None = None, receiver: int | None = None,
+                           current_user: int = Depends(get_current_user)):
    '''
    This function returns a list of all the transactions for the specified user.\n
-
    Parameters:\n
+   - sort: str | None\n
+      - The sort order of the transactions. Acceptable values are 'asc' for ascending or 'desc' for descending.\n
+   - sort_by: str | None\n
+      - The attributes to sort the transactions are 'transaction_date' and 'amount'.\n
+   - page: int | None\n
+      - The page number to retrieve. If not specified, all transactions are returned.\n
+   - transactions_per_page: int\n
+      - The number of transactions per page. Default is 5.\n
+   - transaction_date: str | None\n
+      - Filter transactions by a specific date.\n
+   - direction: str | None\n
+      - Filter transactions by direction ('incoming' or 'outgoing').\n
+   - sender: int | None\n
+      - Filter transactions by the sender's user ID.\n
+   - receiver: int | None\n
+      - Filter transactions by the receiver's user ID.\n
    - current_user: int\n
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-      - This parameter is used to ensure that the request is made by an authenticated user.
+      - This parameter is used to ensure that the request is made by an authenticated user.\n
    ''' 
    try:
-      users_transactions = transactions_service.view_all_transactions(current_user)
+      users_transactions = transactions_service.view_all_transactions(current_user, transaction_date, sender, receiver, direction)
 
       transactions_view = []
       for users_transaction in users_transactions:
-         sender = user_services.get_user_by_id(users_transaction.sender_id)
-         receiver = user_services.get_user_by_id(users_transaction.receiver_id)
+         sender = transactions_service.get_user_by_id(users_transaction.sender_id)
+         receiver = transactions_service.get_user_by_id(users_transaction.receiver_id)
 
          if current_user == sender.id: 
             direction = 'outgoing'
          if current_user == receiver.id:
             direction = 'incoming'
-
+            
          if not sender or not receiver:
                return NotFound(content='Required data not found.')
          
          transactions_view.append(TransactionViewAll.transactions_view(users_transaction, sender, receiver, direction))
       
-      return transactions_view
+      if page:
+         start = (page - 1) * transactions_per_page
+         end = start + transactions_per_page
+         transactions_view = transactions_view[start:end]
+
+      if sort and (sort == 'asc' or sort == 'desc'):
+         return transactions_service.sort_transactions(transactions_view, reverse=sort == 'desc', attribute=sort_by)
+      else:
+         return transactions_view
 
    except JWTError:
       raise HTTPException(
@@ -49,10 +77,9 @@ def get_users_transactions(current_user: int = Depends(get_current_user)):
 
 
 @transactions_router.get('/id/{transaction_id}', response_model=List[TransactionView], status_code=201, tags=['Transactions']) 
-def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
+def get_transaction_by_id(transaction_id: int, current_user: int = Depends(get_current_user)):
    '''
    This function returns a more detailed information about a user's transactions.\n
-
    Parameters:\n
    - transaction_id : int\n
       - The ID of the transaction to retrieve details for.\n
@@ -62,23 +89,23 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
    '''
    try:
       transaction_view = transactions_service.view_transaction_by_id(transaction_id, current_user)
-      sender = user_services.get_user_by_id(transaction_view.sender_id)
-      receiver = user_services.get_user_by_id(transaction_view.receiver_id)
-      card_holder = cards_services.get_card_by_id(transaction_view.cards_id)
-      card_number = cards_services.get_card_by_id(transaction_view.cards_id)
+      sender = transactions_service.get_user_by_id(transaction_view.sender_id)
+      receiver = transactions_service.get_user_by_id(transaction_view.receiver_id)
 
+      if current_user == sender.id and current_user == receiver.id:
+         direction = 'incoming'
       if current_user == sender.id: 
          direction = 'outgoing'
-      if current_user != sender.id:
+      if current_user == receiver.id:
          direction = 'incoming'
 
-      if not sender or not receiver or not card_holder or not card_number:
+      if not sender or not receiver:
             return NotFound(content='Required data not found.')
       
       if transaction_view is None:
          return NotFound(content=f'The transaction you are looking for is not available.')
       else:
-         transaction_view = [TransactionView.transaction_view(transaction_view, sender, receiver,direction, card_holder, card_number)]
+         transaction_view = [TransactionView.transaction_view(transaction_view, sender, receiver,direction)]
          return transaction_view
       
    except JWTError:
@@ -88,7 +115,47 @@ def get_transactions_by_id(transaction_id: int, current_user: int = Depends(get_
    
 
 @transactions_router.post('/wallet', status_code=201, tags=['Transactions']) 
-def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
+def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
+   '''
+   This function makes a transaction to the user wallet's ballance.\n
+   Parameters:\n
+   - transaction : Transaction\n
+      - The transaction details to be added to the user's wallet.\n
+   - current_user: int\n
+      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+      - This parameter is used to ensure that the request is made by an authenticated user.
+   '''
+   try:
+      transaction.transaction_date = datetime.now()
+
+      sender_id = current_user
+      receiver_id = current_user
+      cards_user_id = current_user
+
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
+ 
+      if current_user == sender.id and current_user == receiver.id: 
+         direction = 'incoming'
+
+      if not sender or not receiver:
+            return NotFound(content='Required data not found.')
+      
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction)]
+
+      return transaction_create
+
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
+
+
+@transactions_router.post('/user', status_code=201, tags=['Transactions']) 
+def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''This function makes a transaction to the user wallet's ballance.\n
 
    Parameters:\n
@@ -101,18 +168,63 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
    try:
       transaction.transaction_date = datetime.now()
 
-      sender_id = int(transaction.sender_id)
-      receiver_id = int(transaction.receiver_id)
-      card_id = int(transaction.cards_id)
+      sender_id = current_user
+      receiver_id = transaction.receiver_id
+      cards_user_id = receiver_id
 
-      transaction_create = transactions_service.add_money_to_users_ballnace(transaction)
-      sender = user_services.get_user_by_id(sender_id)
-      receiver = user_services.get_user_by_id(receiver_id)
-      card_holder = cards_services.get_card_by_id(card_id)
-      card_number = cards_services.get_card_by_id(card_id)
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
 
-      if current_user == sender.id and current_user == receiver.id: 
-         direction = 'incoming'
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
+      card_holder = transactions_service.get_card_by_id(card_id)
+      card_number = transactions_service.get_card_by_id(card_id)
+
+      if current_user == sender.id: 
+         direction = 'outgoing'
+
+      if not sender or not receiver or not card_holder or not card_number:
+            return NotFound(content='Required data not found.')
+      
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+
+      return transaction_create
+
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
+   
+
+@transactions_router.post('/category', status_code=201, tags=['Transactions']) 
+def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
+   '''
+   This function makes a transaction to another user or category.\n
+
+   Parameters:\n
+   - transaction : Transaction\n
+      - The transaction details to be added to the user's wallet.\n
+   - current_user: int\n
+      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+      - This parameter is used to ensure that the request is made by an authenticated user.
+   '''
+   try:
+      transaction.transaction_date = datetime.now()
+
+      sender_id = current_user
+      receiver_id = transaction.receiver_id
+      cards_user_id = receiver_id
+
+      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+
+      sender = transactions_service.get_user_by_id(sender_id)
+      receiver = transactions_service.get_user_by_id(receiver_id)
+      card_id = transactions_service.get_card_by_user_id(cards_user_id)
+      card_holder = transactions_service.get_card_by_id(card_id)
+      card_number = transactions_service.get_card_by_id(card_id)
+
+      if current_user == sender.id: 
+         direction = 'outgoing'
 
       if not sender or not receiver or not card_holder or not card_number:
             return NotFound(content='Required data not found.')
@@ -126,30 +238,8 @@ def add_money_to_wallet(transaction: Transaction, current_user: int = Depends(ge
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Your session has expired. Please log in again to continue using the application.')
 
-@transactions_router.post('/', status_code=201, tags=['Transactions']) 
-def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
-   '''
-   This function makes a transaction to another user or category.\n
-
-   Parameters:\n
-   - transaction : Transaction\n
-      - The transaction details to be added to the user's wallet.\n
-   - current_user: int\n
-      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-      - This parameter is used to ensure that the request is made by an authenticated user.
-   '''
-
-   transaction.transaction_date = datetime.now()
-   transaction.transaction_date = transaction.transaction_date.strftime("%Y/%m/%d %H:%M")
-
-   transaction.receiver_id = user_services.user_id_exists(transaction.receiver_id)
-   transaction.categories_id = categories_service.find_category_by_id(transaction.categories_id)
-
-   if transaction.receiver_id and transaction.categories_id:
-      return transactions_service.create_transactions(transaction)
-
-@transactions_router.put('/approval/id/{transaction_id}', status_code=201, tags=['Transactions'])  
-def approve_a_transaction(transaction_id: int, current_user: int = Depends(get_current_user)):
+@transactions_router.put('/preview/id/{transaction_id}', status_code=201, tags=['Transactions'])  
+def preview_transaction(transaction_id: int, transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''
    This function confirmes or declines a transaction.\n
 
@@ -160,8 +250,42 @@ def approve_a_transaction(transaction_id: int, current_user: int = Depends(get_c
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
-   if not transactions_service.transaction_id_exists(transaction_id):
-      return BadRequest(content=f'Transaction {transaction_id} does not exist.')
+   try:
+      sender = transactions_service.get_user_by_id(transaction.sender_id)
+      receiver = transactions_service.get_user_by_id(transaction.receiver_id)
 
-   transaction = transactions_service.approve_transaction(transaction_id)
-   return transaction
+      if current_user == sender.id and current_user == receiver.id:
+         direction = 'incoming'
+      elif current_user == sender.id and current_user != receiver.id: 
+         direction = 'outgoing'
+      elif current_user == receiver.id:
+         direction = 'incoming'
+
+      if not transactions_service.transaction_id_exists(transaction_id):
+         return BadRequest(content=f'Transaction {transaction_id} does not exist.')
+
+      condition_action = transaction.condition
+      
+      if condition_action == 'edited':
+         new_amount = transaction.amount
+         category_name = transaction.category_name
+         receiver_id = transaction.receiver_id
+         if new_amount:
+            transaction_edit = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+         elif category_name:
+            pass
+         elif receiver_id:
+            pass
+      if condition_action == 'sent':
+         amount = transaction.amount
+         status = 'confirmed'
+         transaction_edit = transactions_service.preview_sent_transaction(transaction_id, amount, status, current_user)
+
+      transaction_view = [TransactionView.transaction_view(transaction_edit, sender, receiver,direction)]
+
+      return transaction_view
+   
+   except JWTError:
+      raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Your session has expired. Please log in again to continue using the application.')
