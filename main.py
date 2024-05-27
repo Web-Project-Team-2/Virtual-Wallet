@@ -31,8 +31,8 @@ async def read_root(request: Request):
     return templates.TemplateResponse("home_page.html", {"request": request, "detailed_info": detailed_info})
 
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=8001)
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 
 
 

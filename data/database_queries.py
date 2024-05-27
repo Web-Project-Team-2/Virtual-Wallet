@@ -1,36 +1,49 @@
-from data.connection import _get_connection
+from data.connection import _get_connection_pool
 
 
-def read_query(sql: str, sql_params=()):
-    with _get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, sql_params)
+async def read_query(sql: str, sql_params=()):
+    pool = await _get_connection_pool()
+    if pool is None:
+        raise RuntimeError("Failed to create connection pool")
 
-        return list(cursor)
-
-
-def insert_query(sql: str, sql_params=()) -> int:
-    with _get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, sql_params)
-        conn.commit()
-
-        return cursor.lastrowid
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(sql, sql_params)
+            result = await cursor.fetchall()
+            return result
 
 
-def update_query(sql: str, sql_params=()) -> bool:
-    with _get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, sql_params)
-        conn.commit()
+async def insert_query(sql: str, sql_params=()) -> int:
+    pool = await _get_connection_pool()
+    if pool is None:
+        raise RuntimeError("Failed to create connection pool")
 
-        return cursor.rowcount
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(sql, sql_params)
+            await conn.commit()
+            return cursor.lastrowid
 
 
-def delete_query(sql: str, sql_params=()) -> bool:
-    with _get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, sql_params)
-        conn.commit()
+async def update_query(sql: str, sql_params=()) -> bool:
+    pool = await _get_connection_pool()
+    if pool is None:
+        raise RuntimeError("Failed to create connection pool")
 
-        return cursor.rowcount > 0
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(sql, sql_params)
+            await conn.commit()
+            return cursor.rowcount
+
+
+async def delete_query(sql: str, sql_params=()) -> bool:
+    pool = await _get_connection_pool()
+    if pool is None:
+        raise RuntimeError("Failed to create connection pool")
+
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(sql, sql_params)
+            await conn.commit()
+            return cursor.rowcount > 0

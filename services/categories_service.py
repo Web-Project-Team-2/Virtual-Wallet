@@ -1,8 +1,7 @@
 from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
 
-
-def get_all(search=None, sort_by=None, page=1, size=10):
+async def get_all(search=None, sort_by=None, page=1, size=10):
     sql = '''SELECT id, name FROM categories'''
 
     where_clauses = []
@@ -26,21 +25,18 @@ def get_all(search=None, sort_by=None, page=1, size=10):
     offset = (page - 1) * size
     sql += f" LIMIT {size} OFFSET {offset}"
 
-    return (Category.from_query_result(*row) for row in read_query(sql))
+    results = await read_query(sql)
+    return [Category.from_query_result(*row) for row in results]
 
-
-def create(category: Category):
-    generated_id = insert_query(
-        'INSERT INTO categories(name) VALUES(?)',
-        (category.name,))
+async def create(category: Category):
+    generated_id = await insert_query(
+        'INSERT INTO categories(name) VALUES(%s)',
+        (category.name,)
+    )
 
     category.id = generated_id
     return category
 
-
-def name_exists(name: str):
-    data = read_query('SELECT COUNT(*) from categories WHERE name = ?', (name,))
-    if data == [(0,)]:
-        return False
-
-    return True
+async def name_exists(name: str):
+    data = await read_query('SELECT COUNT(*) from categories WHERE name = %s', (name,))
+    return data[0][0] > 0

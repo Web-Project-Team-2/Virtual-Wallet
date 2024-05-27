@@ -1,11 +1,9 @@
 from data.database_queries import insert_query, read_query, delete_query, update_query
 from data.models.user import User
 from pydantic import EmailStr
-
 from schemas.transactions import TransactionFilters
 
-
-def get_all_users(search=None, page=1, size=10):
+async def get_all_users(search=None, page=1, size=10):
     sql = "SELECT id, email, username, phone_number, is_admin, create_at, status, balance FROM users"
 
     where_clauses = []
@@ -21,72 +19,58 @@ def get_all_users(search=None, page=1, size=10):
     offset = (page - 1) * size
     sql += f" LIMIT {size} OFFSET {offset}"
 
-    return (User.from_query_result(*row) for row in read_query(sql))
+    results = await read_query(sql)
+    return [User.from_query_result(*row) for row in results]
 
+async def block_user(user_id: int):
+    return await update_query("UPDATE users SET status = 'blocked' WHERE id = %s", (user_id,))
 
-def block_user(user_id: int):
-    sql = update_query("UPDATE users SET status = 'blocked' WHERE id =?", (user_id,))
+async def unblock_user(user_id: int):
+    return await update_query("UPDATE users SET status = 'activated' WHERE id = %s", (user_id,))
 
-    return sql
+async def approve_user(email: EmailStr):
+    return await update_query("UPDATE users SET status = 'activated' WHERE email = %s", (email,))
 
+async def check_if_not_admin(current_user_id: int):
+    data = await read_query("SELECT COUNT(*) from users WHERE id = %s AND is_admin = 1", (current_user_id,))
+    return data == [(0,)]
 
-def unblock_user(user_id: int):
-    sql = update_query("UPDATE users SET status = 'activated' WHERE id =?", (user_id,))
-
-    return sql
-
-def approve_user(email: EmailStr):
-    sql = update_query("UPDATE users SET status = 'activated' WHERE email = ?", (email,))
-
-    return sql
-
-
-def check_if_not_admin(current_user_id: int):
-    data = read_query("SELECT COUNT(*) from users WHERE id = ? AND is_admin = 1", (current_user_id, ))
-    if data == [(0,)]:
-        return True
-
-    return False
-
-
-def view_user_transactions(user_id: int, current_user: int, filters: TransactionFilters):
-    admin_status = read_query('SELECT is_admin FROM users WHERE id=?', (current_user,))
-
+async def view_user_transactions(user_id: int, current_user: int, filters: TransactionFilters):
+    admin_status = await read_query('SELECT is_admin FROM users WHERE id=%s', (current_user,))
     if not admin_status or not admin_status[0][0]:
         return "Not authorized. Must be an admin"
 
     query = """
         SELECT status, transaction_date, amount, sender_id, receiver_id, cards_id 
         FROM transactions 
-        WHERE (sender_id=? OR receiver_id=?)
+        WHERE (sender_id=%s OR receiver_id=%s)
     """
     params = [user_id, user_id]
 
     if filters.start_date:
-        query += " AND transaction_date >= ?"
+        query += " AND transaction_date >= %s"
         params.append(filters.start_date)
     if filters.end_date:
-        query += " AND transaction_date <= ?"
+        query += " AND transaction_date <= %s"
         params.append(filters.end_date)
     if filters.sender_id:
-        query += " AND sender_id = ?"
+        query += " AND sender_id = %s"
         params.append(filters.sender_id)
     if filters.recipient_id:
-        query += " AND receiver_id = ?"
+        query += " AND receiver_id = %s"
         params.append(filters.recipient_id)
     if filters.direction:
         if filters.direction == 'incoming':
-            query += " AND receiver_id = ?"
+            query += " AND receiver_id = %s"
             params.append(user_id)
         elif filters.direction == 'outgoing':
-            query += " AND sender_id = ?"
+            query += " AND sender_id = %s"
             params.append(user_id)
 
-    query += f" ORDER BY {filters.sort_by} {filters.sort_order} LIMIT ? OFFSET ?"
+    query += f" ORDER BY {filters.sort_by} {filters.sort_order} LIMIT %s OFFSET %s"
     params.extend([filters.limit, filters.offset])
 
-    get_user_data = read_query(query, params)
-
+    get_user_data = await read_query(query, params)
     return [
         {
             "status": user_data[0],
@@ -98,23 +82,19 @@ def view_user_transactions(user_id: int, current_user: int, filters: Transaction
         } for user_data in get_user_data
     ]
 
-
-def pending_transactions(current_user: int, user_id: int):
-
-    admin_status = read_query('SELECT is_admin FROM users WHERE id=?', (current_user,))
-
+async def pending_transactions(current_user: int, user_id: int):
+    admin_status = await read_query('SELECT is_admin FROM users WHERE id=%s', (current_user,))
     if not admin_status or not admin_status[0][0]:
         return "Not authorized. Must be an admin"
 
-    pending_transactions_data = read_query("SELECT id, amount FROM transactions WHERE status='pending' AND sender_id=?",
-                                           (user_id,))
+    pending_transactions_data = await read_query("SELECT id, amount FROM transactions WHERE status='pending' AND sender_id=%s", (user_id,))
     if not pending_transactions_data:
         return "There aren't any pending transactions."
 
     for transaction in pending_transactions_data:
         transaction_id = transaction[0]
         amount = transaction[1]
-        update_query("UPDATE transactions SET status='declined' WHERE id=?", (transaction_id,))
-        update_query("UPDATE users SET balance=? WHERE id=?", (amount, transaction_id,))
+        await update_query("UPDATE transactions SET status='declined' WHERE id=%s", (transaction_id,))
+        await update_query("UPDATE users SET balance=%s WHERE id=%s", (amount, transaction_id,))
 
     return "All pending transactions have been declined."

@@ -1,18 +1,18 @@
-from mariadb import connect
-from mariadb import IntegrityError
+import aiomysql
 
-
-def _get_connection(database_name='e_wallet'):
+async def _get_connection_pool():
     try:
-        conn = connect(
+        pool = await aiomysql.create_pool(
             user='root',
             password='123456',
-            host='localhost',
+            host='db',
             port=3306,
-            database=database_name
+            db='e_wallet',
+            minsize=1,
+            maxsize=10
         )
-        print(f"Connected to the {database_name} database!")
-        return conn
+        print("Connection pool created!")
+        return pool
     except Exception as e:
         print(f"An error occurred: {e}")
         return None

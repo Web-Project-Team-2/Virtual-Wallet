@@ -11,15 +11,15 @@ from schemas.transactions import TransactionView, TransactionFilters
 from schemas.user import UserInfo
 
 
-def create(username: str, password: str, email: str, phone: str) -> Optional[User]:
+async def create(username: str, password: str, email: str, phone: str) -> Optional[User]:
     try:
-        generated_id = insert_query(
+        generated_id = await insert_query(
             'INSERT INTO users (username, password, email, phone_number) VALUES (%s, %s, %s, %s)',
             (username, password, email, phone)
         )
         if not generated_id:
             return None
-        data = read_query(
+        data = await read_query(
             'SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance FROM users WHERE id = %s',
             (generated_id,)
         )
@@ -28,24 +28,24 @@ def create(username: str, password: str, email: str, phone: str) -> Optional[Use
         return None
 
 
-def find_by_email(email: str) -> Optional[User]:
-    data = read_query(
+async def find_by_email(email: str) -> Optional[User]:
+    data = await read_query(
         'SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance FROM users WHERE email = %s',
         (email,)
     )
     return next((User.from_query_result(*row) for row in data), None)
 
 
-def try_login(email: str, password: str) -> Optional[User]:
-    user = find_by_email(email)
+async def try_login(email: str, password: str) -> Optional[User]:
+    user = await find_by_email(email)
     if user and security.password_hashing.verify_password(password, user.password):
         return user
     return None
 
 
-def view(user_id: int):
+async def view(user_id: int):
     # Fetch user card information
-    card_info = read_query('SELECT card_number, balance, card_holder from cards WHERE user_id = %s', (user_id,))
+    card_info = await read_query('SELECT card_number, balance, card_holder from cards WHERE user_id = %s', (user_id,))
 
     # Generate card objects
     cards = [
@@ -54,9 +54,10 @@ def view(user_id: int):
     ]
 
     # Fetch user transaction information
-    transactions_data = read_query(
+    transactions_data = await read_query(
         'SELECT status, transaction_date, amount, cards_id, receiver_id from transactions WHERE sender_id = %s',
-        (user_id,))
+        (user_id,)
+    )
 
     # Generate transaction objects
     transactions = [
@@ -83,24 +84,28 @@ def view(user_id: int):
     return display_info
 
 
-def view_profile(user_id: int):
-    user_info = read_query('SELECT username, email, balance, phone_number from users WHERE id = %s', (user_id,))
-    result = (UserInfo(username=username, email=email, balance=balance, phone_number=phone_number) for
-              username, email, balance, phone_number in user_info)
-
+async def view_profile(user_id: int):
+    user_info = await read_query('SELECT username, email, balance, phone_number from users WHERE id = %s', (user_id,))
     if not user_info:
-        result = "No user information available"
+        return "No user information available"
 
+    user_info = user_info[0]  # Unpack the single result
+    result = UserInfo(
+        username=user_info[0],
+        email=user_info[1],
+        balance=user_info[2],
+        phone_number=user_info[3]
+    )
     return result
 
 
-def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
+async def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
     try:
-        insert_query(
+        await insert_query(
             'INSERT INTO contacts (users_id, contact_user_id) VALUES (%s, %s)',
             (user_id, contact_user_id)
         )
-        contact_username = read_query(
+        contact_username = await read_query(
             'SELECT username FROM users WHERE id = %s',
             (contact_user_id,)
         )
@@ -109,8 +114,8 @@ def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
         return None
 
 
-def delete_contact(user_id: int, contact_user_id: int) -> bool:
-    existing_contact = read_query(
+async def delete_contact(user_id: int, contact_user_id: int) -> bool:
+    existing_contact = await read_query(
         'SELECT * FROM contacts WHERE users_id = %s AND contact_user_id = %s',
         (user_id, contact_user_id)
     )
@@ -118,7 +123,7 @@ def delete_contact(user_id: int, contact_user_id: int) -> bool:
         return False  # No such contact exists
 
     try:
-        delete_query(
+        await delete_query(
             'DELETE FROM contacts WHERE users_id = %s AND contact_user_id = %s',
             (user_id, contact_user_id)
         )
@@ -127,9 +132,9 @@ def delete_contact(user_id: int, contact_user_id: int) -> bool:
         return False
 
 
-def get_all_contacts(user_id: int) -> Optional[list]:
+async def get_all_contacts(user_id: int) -> Optional[list]:
     try:
-        contacts = read_query(
+        contacts = await read_query(
             'SELECT contact_user_id, (SELECT username FROM users WHERE id = contact_user_id) AS contact_username FROM contacts WHERE users_id = %s',
             (user_id,)
         )
@@ -139,10 +144,11 @@ def get_all_contacts(user_id: int) -> Optional[list]:
         return None
 
 
-def update_profile(user_id: int, email: str, password: str, phone_number: str):
-    update_result = update_query(
+async def update_profile(user_id: int, email: str, password: str, phone_number: str):
+    update_result = await update_query(
         'UPDATE users SET email = %s, password = %s, phone_number = %s WHERE id = %s',
-        (email, password, phone_number, user_id))
+        (email, password, phone_number, user_id)
+    )
 
     if update_result:
         result = "User information updated successfully"
@@ -152,16 +158,17 @@ def update_profile(user_id: int, email: str, password: str, phone_number: str):
     return result
 
 
-def deposit_money(user_id: int, balance: int):
+async def deposit_money(user_id: int, balance: int):
     if balance < 25:
-        return f"Minimum deposit is $25."
+        return "Minimum deposit is $25."
 
-    get_user_balance = read_query('SELECT balance from users WHERE id=?', (user_id,))
+    get_user_balance = await read_query('SELECT balance from users WHERE id=%s', (user_id,))
     new_balance = balance + get_user_balance[0][0]
 
-    update_result = update_query(
+    update_result = await update_query(
         'UPDATE users SET balance = %s WHERE id = %s',
-        (new_balance, user_id))
+        (new_balance, user_id)
+    )
 
     if update_result:
         return f"You have successfully deposited ${balance} into your virtual wallet."
@@ -169,31 +176,19 @@ def deposit_money(user_id: int, balance: int):
         return f"Unable to deposit ${balance} into your account."
 
 
-def withdraw_money(user_id: int, withdraw: int):
-    get_user_balance = read_query('SELECT balance from users WHERE id=?', (user_id,))
+async def withdraw_money(user_id: int, withdraw: int):
+    get_user_balance = await read_query('SELECT balance from users WHERE id=%s', (user_id,))
 
     if withdraw > get_user_balance[0][0]:
         return "Unable to withdraw. You don't have enough cash in your virtual wallet."
     new_balance = get_user_balance[0][0] - withdraw
 
-    update_result = update_query(
+    update_result = await update_query(
         'UPDATE users SET balance = %s WHERE id = %s',
-        (new_balance, user_id))
+        (new_balance, user_id)
+    )
 
     if update_result:
         return f"You have successfully withdraw ${withdraw} from your virtual wallet."
     else:
         return f"Unable to withdraw ${withdraw} into your account."
-
-
-
-
-
-
-
-
-
-
-
-
-

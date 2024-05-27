@@ -7,12 +7,10 @@ INSERT INTO `e_wallet`.`users`
 ('alice_white', 'Pass+4567', 'alice.white@example.com', '3344556677', 0, '2024-05-05 12:00:00', 'blocked'),
 ('charlie_black', 'P@ssw0rd789', 'charlie.black@example.com', '4455667788', 0, '2024-05-06 12:00:00', 'activated'),
 ('dave_green', 'Gr3at*Pass', 'dave.green@example.com', '5566778899', 0, '2024-05-07 12:00:00', 'pending'),
-('eve_red', 'MyP@ssword!', 'eve.red@example.com', '6677889900', 0, '2024-05-08 12:00:00', 'activated'),
-('frank_blue', 'Blue$P@ss', 'frank.blue@example.com', '7788990011', 0, '2024-05-09 12:00:00', 'blocked'),
-('grace_yellow', 'Y3ll0wP@ss', 'grace.yellow@example.com', '8899001122', 0, '2024-05-10 12:00:00', 'pending');
- 
- 
-INSERT INTO `e_wallet`.`cards` 
+('eve_red', 'MyP@ssword!', 'eve.red@example.com', '6677889900', 0, '2024-05-08 12:00:00', 'activated'),ellow', 'Y3ll0wP@ss', 'grace.yellow@example.com', '8899001122', 0, '2024-05-10 12:00:00', 'pending');
+
+
+INSERT INTO `e_wallet`.`cards`
 (`card_number`, `cvv`, `card_holder`, `expiration_date`, `card_status`, `user_id`, `balance`) VALUES
 ('1234567890123456', '123', 'John Doe', '2025-06-01', 'active', 1, 500),
 ('2345678901234567', '234', 'Jane Smith', '2024-12-01', 'active', 2, 500),
@@ -24,8 +22,8 @@ INSERT INTO `e_wallet`.`cards`
 ('8901234567890123', '890', 'Eve Red', '2024-10-01', 'active', 8, 500),
 ('9012345678901234', '901', 'Frank Blue', '2026-02-01', 'not active', 9, 500),
 ('0123456789012345', '012', 'Grace Yellow', '2025-08-01', 'active', 10, 500);
- 
- 
+
+
 INSERT INTO `e_wallet`.`categories` (`name`) VALUES
 ('Rent'),
 ('Utilities'),
@@ -37,7 +35,7 @@ INSERT INTO `e_wallet`.`categories` (`name`) VALUES
 ('Education'),
 ('Gifts'),
 ('Savings');
- 
+
 INSERT INTO `e_wallet`.`contacts` (`users_id`, `contact_user_id`) VALUES
 (1, 2),
 (1, 3),
@@ -49,9 +47,9 @@ INSERT INTO `e_wallet`.`contacts` (`users_id`, `contact_user_id`) VALUES
 (4, 9),
 (5, 10),
 (6, 1);
- 
- 
-INSERT INTO `e_wallet`.`transactions` 
+
+
+INSERT INTO `e_wallet`.`transactions`
 (`status`, `transaction_date`, `amount`, `next_payment`, `categories_id`, `sender_id`, `receiver_id`, `cards_id`) VALUES
 ('confirmed', '2024-05-01 12:00:00', 150.00, '2024-06-01 12:00:00', 1, 1, 2, 1),
 ('pending', '2024-05-02 13:00:00', 75.50, '2024-06-02 13:00:00', 2, 2, 3, 2),
@@ -63,8 +61,8 @@ INSERT INTO `e_wallet`.`transactions`
 ('confirmed', '2024-05-08 19:00:00', 250.75, '2024-06-08 19:00:00', 8, 8, 9, 8),
 ('pending', '2024-05-09 20:00:00', 125.00, '2024-06-09 20:00:00', 9, 9, 10, 9),
 ('confirmed', '2024-05-10 21:00:00', 175.25, '2024-06-10 21:00:00', 10, 10, 1, 10);
- 
- 
+
+
 INSERT INTO `e_wallet`.`users_has_categories` (`users_id`, `categories_id`) VALUES
 (1, 1),
 (1, 2),
@@ -76,3 +74,5 @@ INSERT INTO `e_wallet`.`users_has_categories` (`users_id`, `categories_id`) VALU
 (4, 8),
 (5, 9),
 (5, 10);
+('frank_blue', 'Blue$P@ss', 'frank.blue@example.com', '7788990011', 0, '2024-05-09 12:00:00', 'blocked'),
+('grace_y
