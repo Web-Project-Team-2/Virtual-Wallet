@@ -3,32 +3,23 @@ from data.models.user import User
 from data.models.cards import Card
 from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
-from schemas.transactions import TransactionViewAll
-from common.responses import Unauthorized, NotFound, BadRequest
+
 
 def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
      '''
      This function returns a list of all the transactions for the specified user.\n
      Parameters:\n
-     - sort: str | None\n
-          - The sort order of the transactions. Acceptable values are 'asc' for ascending or 'desc' for descending.\n
-     - sort_by: str | None\n
-          - The attributes to sort the transactions are 'transaction_date' and 'amount'.\n
-     - page: int | None\n
-          - The page number to retrieve. If not specified, all transactions are returned.\n
-     - transactions_per_page: int\n
-          - The number of transactions per page. Default is 5.\n
+     - current_user: int\n
+          - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+          - This parameter is used to ensure that the request is made by an authenticated user.\n
      - transaction_date: str | None\n
           - Filter transactions by a specific date.\n
-     - direction: str | None\n
-          - Filter transactions by direction ('incoming' or 'outgoing').\n
      - sender: int | None\n
           - Filter transactions by the sender's user ID.\n
      - receiver: int | None\n
           - Filter transactions by the receiver's user ID.\n
-     - current_user: int\n
-          - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-          - This parameter is used to ensure that the request is made by an authenticated user.\n
+     - direction: str | None\n
+          - Filter transactions by direction ('incoming' or 'outgoing').\n
      '''
      if transaction_date or sender or receiver or direction:
           sql = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
@@ -86,12 +77,12 @@ def sort_transactions(transactions: list[Transaction], *, attribute='transaction
 def view_transaction_by_id(transaction_id: int, current_user: int):
      '''
      This function returns a more detailed information about a user's transactions.\n
-   Parameters:\n
-   - transaction_id : int\n
-      - The ID of the transaction to retrieve details for.\n
-   - current_user : int\n
-      - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-      - This parameter is used to ensure that the request is made by an authenticated user.
+     Parameters:\n
+     - transaction_id : int\n
+          - The ID of the transaction to retrieve details for.\n
+     - current_user : int\n
+          - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
+          - This parameter is used to ensure that the request is made by an authenticated user.
      '''
      transactions_out = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                           FROM transactions
@@ -118,6 +109,7 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
      else:
           return transaction 
 
+
 def create_transaction_to_users_ballnace(transaction: Transaction, current_user: int):
      '''This function makes a transaction to the user wallet's ballance.
 
@@ -139,14 +131,11 @@ def create_transaction_to_users_ballnace(transaction: Transaction, current_user:
                            VALUES(?,?,?,?,?,?,?,?,?)''',
                     (transaction.id, transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
                                 transaction.category_name, sender_id, receiver_id, card_id))
-     
-     # user_ballance = update_query(
-     #                '''UPDATE users SET balance = balance + ? WHERE id = ?''',
-     #                (transaction.amount, current_user))
 
      transaction.id = generated_id
 
      return transaction
+
 
 def create_transactions(transaction: Transaction):
      '''
@@ -166,6 +155,7 @@ def create_transactions(transaction: Transaction):
 
      return transaction
 
+
 def transaction_id_exists(transaction_id: int):
      '''Explanation to follow.\n
      Parameters explanation to follow.
@@ -176,6 +166,7 @@ def transaction_id_exists(transaction_id: int):
                  FROM transactions 
                  WHERE id = ?''',
           (transaction_id,)))
+
 
 def preview_edited_transaction(transaction_id: int, new_amount: float):
      transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
@@ -189,19 +180,20 @@ def preview_edited_transaction(transaction_id: int, new_amount: float):
         return None 
 
      if new_amount:
-          updated_transaction = update_query('UPDATE transactions SET amount = ? WHERE id = ?',
+          edited_transaction = update_query('UPDATE transactions SET amount = ? WHERE id = ?',
                                 (new_amount, transaction_id))
      
-     updated_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+     edited_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
                                (transaction_id,))
 
-     updated_transaction = next((Transaction.from_query_result(*row) for row in updated_transactions), None)
+     edited_transaction = next((Transaction.from_query_result(*row) for row in edited_transactions), None)
 
-     return updated_transaction
+     return edited_transaction
 
-def preview_sent_transaction(transaction_id: int, amount: float, status: str, current_user: int):
+
+def preview_sent_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
      transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
@@ -216,11 +208,11 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, cu
      receiver_id = transaction.receiver_id
      cards_id = transaction.cards_id
 
-     updated_transaction = update_query('UPDATE transactions SET amount = ?, status = ? WHERE id = ?',
-                                        (amount, status, transaction_id))
+     sent_transaction = update_query('UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                        (status, condition_action, transaction_id))
      
      # updated_card_balance
-     update_query('UPDATE cards SET balance = balance + ? WHERE id = ?',
+     update_query('UPDATE cards SET balance = balance - ? WHERE id = ?',
                                          (amount, cards_id))
      
      if current_user == sender_id and current_user != receiver_id:
@@ -232,14 +224,40 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, cu
           update_query('UPDATE users SET balance = balance + ? WHERE id = ?',
                                               (amount, receiver_id))
 
-     updated_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+     sent_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
                                (transaction_id,))
 
-     updated_transaction = next((Transaction.from_query_result(*row) for row in updated_transactions), None)
+     sent_transaction = next((Transaction.from_query_result(*row) for row in sent_transactions), None)
 
-     return updated_transaction
+     return sent_transaction
+
+
+def preview_cancel_transaction(transaction_id: int, status: str, condition_action: str):
+     transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+
+     if transaction is None:
+        return None 
+
+     cancelled_transaction = update_query('UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                        (status, condition_action, transaction_id))
+     
+
+     cancelled_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     cancelled_transaction = next((Transaction.from_query_result(*row) for row in cancelled_transactions), None)
+
+     return cancelled_transaction
+
 
 def get_user_by_id(user_id: int):
     user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
@@ -269,6 +287,7 @@ def get_card_by_id(card_id: int):
     card = next((Card.from_query_result(*row) for row in card_data), None)
 
     return card
+
 
 def get_card_by_user_id(cards_user_id: int):
     card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
