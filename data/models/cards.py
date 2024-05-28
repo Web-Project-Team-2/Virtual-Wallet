@@ -10,7 +10,7 @@ class Card(BaseModel):
     expiration_date: date
     card_status: str
     user_id: int
-    balance: int | None = None
+    balance: float | None = None
 
     @classmethod
     def from_query_result(cls, id, card_number, cvv, card_holder, expiration_date,

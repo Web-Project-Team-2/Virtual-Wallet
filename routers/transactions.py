@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from jose import JWTError
-from common.responses import BadRequest, NotFound
+from datetime import datetime
+from typing import List
 from common.authorization import get_current_user
+from common.responses import BadRequest, NotFound
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
 from services import transactions_service
-from datetime import datetime
-from typing import List
 
 
 transactions_router = APIRouter(prefix='/transactions')
@@ -50,9 +50,11 @@ def get_users_transactions(sort: str | None = None, sort_by: str | None = None,
          sender = transactions_service.get_user_by_id(users_transaction.sender_id)
          receiver = transactions_service.get_user_by_id(users_transaction.receiver_id)
 
-         if current_user == sender.id: 
+         if current_user == sender.id and current_user == receiver.id:
+            direction = 'incoming'
+         elif current_user == sender.id: 
             direction = 'outgoing'
-         if current_user == receiver.id:
+         elif current_user == receiver.id:
             direction = 'incoming'
             
          if not sender or not receiver:
@@ -132,12 +134,12 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
       receiver_id = current_user
       cards_user_id = current_user
 
-      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+      transaction_create = transactions_service.create_transaction_to_users_wallet(transaction, current_user)
 
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
       card_id = transactions_service.get_card_by_user_id(cards_user_id)
- 
+
       if current_user == sender.id and current_user == receiver.id: 
          direction = 'incoming'
 
@@ -156,8 +158,8 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
 
 @transactions_router.post('/user', status_code=201, tags=['Transactions']) 
 def create_transaction_wallet(transaction: Transaction, current_user: int = Depends(get_current_user)):
-   '''This function makes a transaction to the user wallet's ballance.\n
-
+   '''
+   This function makes a transaction to the user wallet's ballance.\n
    Parameters:\n
    - transaction : Transaction\n
       - The transaction details to be added to the user's wallet.\n
@@ -170,23 +172,28 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
 
       sender_id = current_user
       receiver_id = transaction.receiver_id
-      cards_user_id = receiver_id
-
-      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+      cards_user_id = current_user
 
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
+      contact = transactions_service.contact_id_exists(current_user, transaction.receiver_id)
+      receiver_status = transactions_service.get_user_by_status(receiver.id)
       card_id = transactions_service.get_card_by_user_id(cards_user_id)
       card_holder = transactions_service.get_card_by_id(card_id)
       card_number = transactions_service.get_card_by_id(card_id)
 
+      if contact is not None and receiver_status != 'pending' and receiver_status != 'blocked':
+         transaction_create = transactions_service.create_transaction_to_users_balance(transaction, current_user)
+      else:
+         return BadRequest(content=f'The contact is not available.')
+      
       if current_user == sender.id: 
          direction = 'outgoing'
 
       if not sender or not receiver or not card_holder or not card_number:
-            return NotFound(content='Required data not found.')
+         return NotFound(content='Required data not found.')
       
-      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction)]
 
       return transaction_create
 
@@ -200,7 +207,6 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
 def make_a_transaction(transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''
    This function makes a transaction to another user or category.\n
-
    Parameters:\n
    - transaction : Transaction\n
       - The transaction details to be added to the user's wallet.\n
@@ -238,11 +244,11 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Your session has expired. Please log in again to continue using the application.')
 
+
 @transactions_router.put('/preview/id/{transaction_id}', status_code=201, tags=['Transactions'])  
 def preview_transaction(transaction_id: int, transaction: Transaction, current_user: int = Depends(get_current_user)):
    '''
    This function confirmes or declines a transaction.\n
-
    Parameters:\n
    - transaction_id : int\n
       - The ID of the transaction to retrieve details for.\n
@@ -266,22 +272,62 @@ def preview_transaction(transaction_id: int, transaction: Transaction, current_u
 
       condition_action = transaction.condition
       
-      if condition_action == 'edited':
-         new_amount = transaction.amount
-         category_name = transaction.category_name
-         receiver_id = transaction.receiver_id
-         if new_amount:
-            transaction_edit = transactions_service.preview_edited_transaction(transaction_id, new_amount)
-         elif category_name:
-            pass
-         elif receiver_id:
-            pass
-      if condition_action == 'sent':
+      if current_user == sender.id and current_user == receiver.id:
+         if condition_action == 'edited':
+            new_amount = transaction.amount
+            # category_name = transaction.category_name
+            # receiver_id = transaction.receiver_id
+            if new_amount:
+               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+               transaction_ready = transaction_edited
+            # elif category_name:
+            #    pass
+            # elif receiver_id:
+            #    pass
+         elif condition_action == 'sent' and transaction.status == 'pending':
+            amount = transaction.amount
+            status = 'confirmed'
+            transaction_sent = transactions_service.preview_sent_transaction(transaction_id, amount, status, condition_action, current_user)
+            transaction_ready = transaction_sent
+         elif condition_action == 'cancelled' and transaction.status == 'pending':
+            status = 'declined'
+            transaction_cancelled = transactions_service.preview_cancel_transaction(transaction_id,  status, condition_action)
+            transaction_ready = transaction_cancelled
+      if current_user == sender.id and current_user != receiver.id:
+         if condition_action == 'edited':
+            new_amount = transaction.amount
+            # category_name = transaction.category_name
+            # receiver_id = transaction.receiver_id
+            if new_amount:
+               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+               transaction_ready = transaction_edited
+            # elif category_name:
+            #    pass
+            # elif receiver_id:
+            #    pass
+         elif condition_action == 'sent' and transaction.status == 'pending':
+            amount = transaction.amount
+            status = transaction.status
+            transaction_sent = transactions_service.preview_sent_transaction(transaction_id, amount, status, condition_action, current_user)
+            transaction_ready = transaction_sent
+         elif condition_action == 'cancelled' and transaction.status == 'pending':
+            status = 'declined'
+            transaction_cancelled = transactions_service.preview_cancel_transaction(transaction_id,  status, condition_action)
+            transaction_ready = transaction_cancelled
+      elif current_user == receiver.id and condition_action == 'sent' and transaction.status == 'confirmed':
          amount = transaction.amount
          status = 'confirmed'
-         transaction_edit = transactions_service.preview_sent_transaction(transaction_id, amount, status, current_user)
-
-      transaction_view = [TransactionView.transaction_view(transaction_edit, sender, receiver,direction)]
+         condition_action = 'sent'
+         transaction_confirmed = transactions_service.preview_confirm_transaction(transaction_id, amount, status, condition_action, current_user)
+         transaction_ready = transaction_confirmed
+      elif current_user == receiver.id and condition_action == 'sent' and transaction.status == 'declined':
+         amount = transaction.amount
+         status = 'declined'
+         condition_action = 'cancelled'
+         transaction_declined = transactions_service.preview_decline_transaction(transaction_id, amount, status, condition_action, current_user)
+         transaction_ready = transaction_declined
+      
+      transaction_view = [TransactionView.transaction_view(transaction_ready, sender, receiver,direction)]
 
       return transaction_view
    

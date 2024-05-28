@@ -20,6 +20,7 @@ class TransactionViewAll(BaseModel):
             direction=direction
         )
 
+
 class TransactionView(BaseModel):
     status: str 
     condition: str 
