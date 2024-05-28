@@ -9,6 +9,7 @@ from data.models.user import User
 from schemas.cards import ViewCard
 from schemas.transactions import TransactionView, TransactionFilters
 from schemas.user import UserInfo
+from security import password_hashing
 
 
 async def create(username: str, password: str, email: str, phone: str) -> Optional[User]:
@@ -38,7 +39,7 @@ async def find_by_email(email: str) -> Optional[User]:
 
 async def try_login(email: str, password: str) -> Optional[User]:
     user = await find_by_email(email)
-    if user and security.password_hashing.verify_password(password, user.password):
+    if user and password_hashing.verify_password(password, user.password):
         return user
     return None
 
@@ -85,19 +86,17 @@ async def view(user_id: int):
 
 
 async def view_profile(user_id: int):
-    user_info = await read_query('SELECT username, email, balance, phone_number from users WHERE id = %s', (user_id,))
+    user_info = await read_query('SELECT username, email, balance, phone_number FROM users WHERE id = %s', (user_id,))
     if not user_info:
         return "No user information available"
 
     user_info = user_info[0]  # Unpack the single result
-    result = UserInfo(
-        username=user_info[0],
-        email=user_info[1],
-        balance=user_info[2],
-        phone_number=user_info[3]
-    )
-    return result
-
+    return {
+        "username": user_info[0],
+        "email": user_info[1],
+        "balance": user_info[2],
+        "phone_number": user_info[3]
+    }
 
 async def create_contact(user_id: int, contact_user_id: int) -> Optional[dict]:
     try:

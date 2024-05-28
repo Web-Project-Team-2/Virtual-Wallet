@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .profile-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .profile-header h1 {
+            color: #007bff;
+            font-size: 2.5rem;
+        }
+        .profile-info, .cards-info, .transactions-info {
+            margin-bottom: 20px;
+        }
+        .profile-info label, .cards-info label, .transactions-info label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+        .profile-info span, .cards-info span, .transactions-info span {
+            color: #343a40;
+        }
+        .edit-button {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .edit-button a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .edit-button a:hover {
+            text-decoration: underline;
+        }
+        .profile-card, .cards-card, .transactions-card {
+            border: 1px solid #007bff;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+        }
+        .card-header {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px 5px 0 0;
+        }
+        .card-body {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <h1>User Profile</h1>
+        </div>
+        <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="true">Profile</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="cards-tab" data-toggle="tab" href="#cards" role="tab" aria-controls="cards" aria-selected="false">View Cards</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="profileTabsContent">
+            <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                <div class="edit-button">
+                    <a href="/edit-profile">Edit Profile</a>
+                </div>
+                <div class="profile-card">
+                    <div class="card-header">
+                        <h2>Profile Details</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-info">
+                            <label>Email:</label>
+                            <span>{{ user.email }}</span>
+                        </div>
+                        <div class="profile-info">
+                            <label>Balance:</label>
+                            <span>${{ user.balance }}</span>
+                        </div>
+                        <div class="profile-info">
+                            <label>Phone Number:</label>
+                            <span>{{ user.phone_number }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="cards" role="tabpanel" aria-labelledby="cards-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="cards-card">
+                            <div class="card-header">
+                                <h2>Cards</h2>
+                            </div>
+                            <div class="card-body">
+                                {% if card_info.cards %}
+                                    {% for card in card_info.cards %}
+                                        <div class="cards-info">
+                                            <label>Card Number:</label>
+                                            <span>{{ card.card_number }}</span>
+                                        </div>
+                                        <div class="cards-info">
+                                            <label>Balance:</label>
+                                            <span>${{ card.balance }}</span>
+                                        </div>
+                                        <div class="cards-info">
+                                            <label>Card Holder:</label>
+                                            <span>{{ card.card_holder }}</span>
+                                        </div>
+                                        <hr>
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No cards found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="transactions-card">
+                            <div class="card-header">
+                                <h2>Transactions</h2>
+                            </div>
+                            <div class="card-body">
+                                {% if card_info.transactions != "No transactions" %}
+                                    {% for transaction in card_info.transactions %}
+                                        <div class="transactions-info">
+                                            <label>Status:</label>
+                                            <span>{{ transaction.status }}</span>
+                                        </div>
+                                        <div class="transactions-info">
+                                            <label>Date:</label>
+                                            <span>{{ transaction.transaction_date }}</span>
+                                        </div>
+                                        <div class="transactions-info">
+                                            <label>Amount:</label>
+                                            <span>${{ transaction.amount }}</span>
+                                        </div>
+                                        <div class="transactions-info">
+                                            <label>Card ID:</label>
+                                            <span>{{ transaction.card_id }}</span>
+                                        </div>
+                                        <div class="transactions-info">
+                                            <label>Receiver ID:</label>
+                                            <span>{{ transaction.receiver_id }}</span>
+                                        </div>
+                                        <hr>
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No transactions found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

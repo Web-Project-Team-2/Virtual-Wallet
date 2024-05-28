@@ -3,42 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ detailed_info.title }}</title>
+    <title>{{ detailed_info.title if detailed_info else 'Home Page' }}</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">{{ detailed_info.title }}</a>
+        <a class="navbar-brand" href="#">{{ detailed_info.title if detailed_info else 'Home Page' }}</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/features">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/contact">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn btn-primary" href="/login">Login</a>
+                </li>
+            </ul>
+        </div>
     </nav>
     <div class="container mt-5">
+        {% if message %}
+        <div class="alert alert-success" role="alert" id="success-alert">
+            {{ message }}
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var alertBox = document.getElementById('success-alert');
+                if (alertBox) {
+                    setTimeout(function() {
+                        alertBox.style.display = 'none';
+                    }, 3000);
+                }
+                var url = new URL(window.location.href);
+                url.searchParams.delete('message');
+                window.history.replaceState({}, document.title, url.toString());
+            });
+        </script>
+        {% endif %}
         <div class="jumbotron">
-            <h1 class="display-4">{{ detailed_info.title }}</h1>
-            <p class="lead">{{ detailed_info.description }}</p>
-            <a class="btn btn-primary btn-lg" href="#" role="button">Get Started</a>
+            <h1 class="display-4">{{ detailed_info.title if detailed_info else 'Welcome' }}</h1>
+            <p class="lead">{{ detailed_info.description if detailed_info else 'This is the home page.' }}</p>
+            <a class="btn btn-primary btn-lg" href="/register" role="button">Get Started</a>
         </div>
 
         <h2>Features</h2>
-        {% for feature in detailed_info.features %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>{{ feature.title }}</h3>
+        {% if detailed_info %}
+            {% for feature in detailed_info.features %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>{{ feature.title }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            {% for detail in feature.details %}
+                                <li>{{ detail }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <ul>
-                        {% for detail in feature.details %}
-                            <li>{{ detail }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        {% endif %}
 
         <div class="text-center mt-5">
-            <p>{{ detailed_info.getting_started }}</p>
-            <a class="btn btn-success btn-lg" href="/register" role="button">Register Now</a>
+            <p>{{ detailed_info.getting_started if detailed_info else 'Get started now!' }}</p>
         </div>
     </div>
 

@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-async def verify_password(plain_password, hashed_password):
+def verify_password(plain_password, hashed_password):
     new_hashed_pass = get_password_hash(plain_password)
     return new_hashed_pass == hashed_password
 

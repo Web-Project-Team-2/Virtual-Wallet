@@ -5,7 +5,7 @@ async def _get_connection_pool():
         pool = await aiomysql.create_pool(
             user='root',
             password='123456',
-            host='db',
+            host='localhost',
             port=3306,
             db='e_wallet',
             minsize=1,

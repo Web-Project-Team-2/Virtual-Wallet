@@ -1,52 +1,51 @@
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Form, Request
+from starlette.responses import HTMLResponse, RedirectResponse
+
 import security.password_hashing
 from common import authorization
-from common.authorization import create_access_token
+from common.authorization import create_access_token, get_current_user
 from common.helper_functions import check_password
 from common.wallet_info import detailed_info
+from routers.frontend import templates
 from schemas.contact import ContactCreate
 from schemas.deposit import Deposit
 from schemas.withdraw import WithdrawMoney
-from schemas.user import UserCreate, UserOut, UserLogin, UserInfoUpdate
-from security.password_hashing import verify_password
+from schemas.user import UserCreate, UserLogin, UserInfoUpdate
+
 from services import user_services
 
 users_router = APIRouter(prefix='/users')
 public_router = APIRouter()
 
 
-@users_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserOut, tags=["Users"])
-async def register(user_create: UserCreate):
+@users_router.get("/register", response_class=HTMLResponse)
+async def get_register_form(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@users_router.post("/register", response_class=HTMLResponse)
+async def register_user(request: Request, username: str = Form(...), password: str = Form(...), email: str = Form(...), phone_number: str = Form(...)):
+    user_create = UserCreate(username=username, password=password, email=email, phone_number=phone_number)
     check_password(user_create.password)
 
     hashed_password = security.password_hashing.get_password_hash(user_create.password)
     user_create.password = hashed_password
 
-    new_user = await user_services.create(user_create.username, user_create.password, user_create.email,
-                                          user_create.phone_number)
+    new_user = await user_services.create(user_create.username, user_create.password, user_create.email, user_create.phone_number)
 
     if not new_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Username, email, or phone number is already taken.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username, email, or phone number is already taken.")
 
-    return UserOut(
-        email=new_user.email,
-        username=new_user.username,
-        phone_number=new_user.phone_number
-    )
+    # Redirect to login page after successful registration with user details
+    return RedirectResponse(url=f"/home_page?email={email}&username={username}&phone_number={phone_number}&message=User registered successfully!", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @users_router.post('/login', tags=["Users"])
 async def login(user_credentials: UserLogin):
     user = await user_services.try_login(user_credentials.email, user_credentials.password)
-
     if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
-    if not verify_password(user_credentials.password, user.password):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials")
 
     access_token = create_access_token(data={"user_id": user.id})
-
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -60,7 +59,7 @@ async def view_credit_info(current_user: int = Depends(authorization.get_current
 
 
 @users_router.get('/info', tags=["Users"])
-async def view_user_info(current_user: int = Depends(authorization.get_current_user)):
+async def view_user_info(current_user: int = Depends(get_current_user)):
     try:
         view_info_result = await user_services.view_profile(current_user)
         return view_info_result

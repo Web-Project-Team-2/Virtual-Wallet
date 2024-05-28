@@ -15,8 +15,7 @@ services:
       MYSQL_DATABASE: e_wallet
       DATABASE_NAME: root
     volumes:
-      - db_data:/var/lib/mysql
-      - ./scripts:/docker-entrypoint-initdb.d
+      - ./scripts:/docker-entrypoint-initdb.d/db_schema_script.sql
 #    healthcheck:
 #      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
 #      interval: 30s
