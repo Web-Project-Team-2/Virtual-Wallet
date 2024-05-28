@@ -215,10 +215,11 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, co
      sent_transaction = update_query('UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
                                         (status, condition_action, transaction_id))
      
-     # updated_card_balance
-     update_query('UPDATE cards SET balance = balance - ? WHERE id = ?',
+     if current_user == transaction.sender_id and current_user == transaction.receiver_id:
+          # updated_card_balance
+          update_query('UPDATE cards SET balance = balance - ? WHERE id = ?',
                                          (amount, cards_id))
-     
+
      if current_user == sender_id and current_user != receiver_id:
           # updated_user_balance
           update_query('UPDATE users SET balance = balance - ? WHERE id = ?',
@@ -236,6 +237,38 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, co
      sent_transaction = next((Transaction.from_query_result(*row) for row in sent_transactions), None)
 
      return sent_transaction
+
+def preview_confirm_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+     transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+
+     if transaction is None:
+        return None 
+
+     sender_id = transaction.sender_id
+     receiver_id = transaction.receiver_id
+
+     confirmed_transaction = update_query('UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                        (status, condition_action, transaction_id))
+
+     if current_user != sender_id and current_user == receiver_id:
+          # updated_user_balance
+          update_query('UPDATE users SET balance = balance + ? WHERE id = ?',
+                                              (amount, receiver_id))
+          
+
+     confirmed_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     confirmed_transaction = next((Transaction.from_query_result(*row) for row in confirmed_transactions), None)
+
+     return confirmed_transaction
 
 
 def preview_cancel_transaction(transaction_id: int, status: str, condition_action: str):
@@ -262,6 +295,36 @@ def preview_cancel_transaction(transaction_id: int, status: str, condition_actio
 
      return cancelled_transaction
 
+def preview_decline_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+     transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
+
+     if transaction is None:
+        return None 
+
+     declined_amount = transaction.amount
+     sender = transaction.sender_id
+
+     # updated_user_balance
+     update_query('UPDATE users SET balance = balance + ? WHERE id = ?',
+                                              (declined_amount, sender))
+
+     declined_transaction = update_query('UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                        (status, condition_action, transaction_id))
+     
+
+     declined_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                                      FROM transactions
+                                      WHERE id = ?''',
+                               (transaction_id,))
+
+     declined_transaction = next((Transaction.from_query_result(*row) for row in declined_transactions), None)
+
+     return declined_transaction
 
 def get_user_by_id(user_id: int):
     user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
