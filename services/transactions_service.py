@@ -110,9 +110,8 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
           return transaction 
 
 
-def create_transaction_to_users_ballnace(transaction: Transaction, current_user: int):
+def create_transaction_to_users_wallet(transaction: Transaction, current_user: int):
      '''This function makes a transaction to the user wallet's ballance.
-
      Parameters:
      transaction : Transaction
         The transaction details to be added to the user's wallet.
@@ -137,19 +136,24 @@ def create_transaction_to_users_ballnace(transaction: Transaction, current_user:
      return transaction
 
 
-def create_transactions(transaction: Transaction):
+def create_transaction_to_users_balance(transaction: Transaction, current_user: int):
      '''
      This function makes a transaction to another user or category.\n
-
      Parameters:
      transaction : Transaction
         The transaction details to be added to the user's wallet.
      '''
+     sender_id = current_user
+     receiver_id = transaction.receiver_id
+     cards_user_id = current_user
+
+     card_id = get_card_by_user_id(cards_user_id)
+
      generated_id = insert_query(
-                    '''INSERT INTO transactions(id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
+                    '''INSERT INTO transactions(id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                            VALUES(?,?,?,?,?,?,?,?,?)''',
                     (transaction.id,transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
-                                transaction.category_name, transaction.sender_id, transaction.receiver_id, transaction.cards_id))
+                                transaction.category_name, sender_id, receiver_id, card_id))
 
      transaction.id = generated_id
 
@@ -269,6 +273,24 @@ def get_user_by_id(user_id: int):
     return user
 
 
+def get_user_by_status(user_id: int) -> str:
+     '''
+     This function retrieves the status of a user from the database based on their user ID.
+    
+     Parameters:
+     user_id : int
+          The ID of the user whose status is being retrieved.
+
+    '''
+     user_status = read_query('''SELECT status
+                              FROM users
+                              WHERE id = ?''', (user_id,))
+    
+     user_status = next((row[0] for row in user_status), None)
+
+     return user_status
+
+
 def get_category_by_id(category_id: int):
     category_data = read_query(
         'SELECT id, name FROM categories WHERE id = ?',
@@ -307,3 +329,20 @@ def user_id_exists(user_id: int):
                FROM users 
                WHERE id = ?''',
         (user_id,)))
+
+
+def contact_id_exists(current_user: int, reciever_id: int):
+     '''
+     This function checks if a contact exists between the current user and the receiver.
+     Parameters:
+     current_user : int
+          The ID of the current authenticated user.
+     reciever_id : int
+          The ID of the receiver to check the contact against.
+     '''
+     return any(
+     read_query(
+          '''SELECT users_id, contact_user_id
+                 FROM contacts 
+                 WHERE users_id = ? AND contact_user_id = ?''',
+          (current_user, reciever_id,)))

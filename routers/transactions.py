@@ -134,7 +134,7 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
       receiver_id = current_user
       cards_user_id = current_user
 
-      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+      transaction_create = transactions_service.create_transaction_to_users_wallet(transaction, current_user)
 
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
@@ -172,23 +172,28 @@ def create_transaction_wallet(transaction: Transaction, current_user: int = Depe
 
       sender_id = current_user
       receiver_id = transaction.receiver_id
-      cards_user_id = receiver_id
-
-      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+      cards_user_id = current_user
 
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
+      contact = transactions_service.contact_id_exists(current_user, transaction.receiver_id)
+      receiver_status = transactions_service.get_user_by_status(receiver.id)
       card_id = transactions_service.get_card_by_user_id(cards_user_id)
       card_holder = transactions_service.get_card_by_id(card_id)
       card_number = transactions_service.get_card_by_id(card_id)
 
+      if contact is not None and receiver_status != 'pending' and receiver_status != 'blocked':
+         transaction_create = transactions_service.create_transaction_to_users_balance(transaction, current_user)
+      else:
+         return BadRequest(content=f'The contact is not available.')
+      
       if current_user == sender.id: 
          direction = 'outgoing'
 
       if not sender or not receiver or not card_holder or not card_number:
-            return NotFound(content='Required data not found.')
+         return NotFound(content='Required data not found.')
       
-      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction)]
 
       return transaction_create
 
