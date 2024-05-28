@@ -293,6 +293,14 @@ def preview_transaction(transaction_id: int, transaction: Transaction, current_u
             status = 'declined'
             transaction_cancelled = transactions_service.preview_cancel_transaction(transaction_id,  status, condition_action)
             transaction_ready = transaction_cancelled
+      elif current_user == receiver.id and condition_action == 'sent' and transaction.status == 'pending':
+         amount = transaction.amount
+         transaction_preview = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+         transaction_ready = transaction_preview
+      elif current_user == receiver.id and condition_action == 'sent' and transaction.status == 'confirmed':
+         pass
+      elif current_user == receiver.id and condition_action == 'sent' and transaction.status == 'declined':
+         pass
       
       transaction_view = [TransactionView.transaction_view(transaction_ready, sender, receiver,direction)]
 
