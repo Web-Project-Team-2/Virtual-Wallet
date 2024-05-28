@@ -2,9 +2,10 @@ from data.database_queries import insert_query, read_query, delete_query, update
 from data.models.user import User
 from pydantic import EmailStr
 from schemas.transactions import TransactionFilters
+from schemas.user import AdminUserInfo
 
 async def get_all_users(search=None, page=1, size=10):
-    sql = "SELECT id, email, username, phone_number, is_admin, create_at, status, balance FROM users"
+    sql = "SELECT id, username, email, phone_number, is_admin, create_at, status, balance FROM users"
 
     where_clauses = []
 
@@ -20,7 +21,7 @@ async def get_all_users(search=None, page=1, size=10):
     sql += f" LIMIT {size} OFFSET {offset}"
 
     results = await read_query(sql)
-    return [User.from_query_result(*row) for row in results]
+    return [AdminUserInfo.from_query_result(*row) for row in results]
 
 async def block_user(user_id: int):
     return await update_query("UPDATE users SET status = 'blocked' WHERE id = %s", (user_id,))
