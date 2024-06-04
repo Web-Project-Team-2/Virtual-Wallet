@@ -2,19 +2,20 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class RecurrringTransaction(BaseModel):
+class RecurringTransaction(BaseModel):
     id: int | None = None
     recurring_transaction_date: datetime | None = None
     next_payment: datetime | None = None
     status: str = 'pending' 
     condition: str = 'edited'
     amount: float
-    users_id: int | None = None
+    sender_id: int | None = None
+    receiver_id: int
     categories_id: int | None = None
 
     @classmethod
-    def from_query_result(cls, id, recurring_transaction_date, next_payment,
-                          status, condition, amount, users_id, categories_id,):
+    def from_query_result(cls, id, recurring_transaction_date, next_payment, status,
+                          condition, amount, sender_id, receiver_id, categories_id,):
         return cls(
             id=id,
             recurring_transaction_date=recurring_transaction_date,
@@ -22,6 +23,7 @@ class RecurrringTransaction(BaseModel):
             status=status,
             condition=condition,
             amount=amount,
-            users_id=users_id,
+            sender_id=sender_id,
+            receiver_id=receiver_id,
             categories_id=categories_id,
         )
