@@ -159,6 +159,28 @@ def create_transaction_to_users_balance(transaction: Transaction, current_user: 
 
      return transaction
 
+def create_transaction_to_users_category(transaction: Transaction, current_user: int):
+     '''
+     This function makes a transaction to another user or category.\n
+     Parameters:
+     transaction : Transaction
+        The transaction details to be added to the user's wallet.
+     '''
+     sender_id = current_user
+     receiver_id = transaction.receiver_id
+     cards_user_id = current_user
+
+     card_id = get_card_by_user_id(cards_user_id)
+
+     generated_id = insert_query(
+                    '''INSERT INTO transactions(id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
+                           VALUES(?,?,?,?,?,?,?,?,?)''',
+                    (transaction.id,transaction.status, transaction.condition, transaction.transaction_date, transaction.amount,
+                                transaction.category_name, sender_id, receiver_id, card_id))
+
+     transaction.id = generated_id
+
+     return transaction
 
 def transaction_id_exists(transaction_id: int):
      '''Explanation to follow.\n
@@ -172,7 +194,7 @@ def transaction_id_exists(transaction_id: int):
           (transaction_id,)))
 
 
-def preview_edited_transaction(transaction_id: int, new_amount: float):
+def preview_edited_transaction(transaction_id: int, new_amount: float, new_category_name: str, new_receiver_id: int):
      transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',
@@ -186,7 +208,13 @@ def preview_edited_transaction(transaction_id: int, new_amount: float):
      if new_amount:
           edited_transaction = update_query('UPDATE transactions SET amount = ? WHERE id = ?',
                                 (new_amount, transaction_id))
-     
+     if new_category_name:
+          edited_transaction = update_query('UPDATE transactions SET category_name = ? WHERE id = ?',
+                                (new_category_name, transaction_id))
+     if new_receiver_id:
+          edited_transaction = update_query('UPDATE transactions SET reveiver_id = ? WHERE id = ?',
+                                (new_receiver_id, transaction_id))
+          
      edited_transactions = read_query('''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                                       FROM transactions
                                       WHERE id = ?''',

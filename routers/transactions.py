@@ -221,7 +221,7 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
       receiver_id = transaction.receiver_id
       cards_user_id = receiver_id
 
-      transaction_create = transactions_service.create_transaction_to_users_ballnace(transaction, current_user)
+      transaction_create = transactions_service.create_transaction_to_users_category(transaction, current_user)
 
       sender = transactions_service.get_user_by_id(sender_id)
       receiver = transactions_service.get_user_by_id(receiver_id)
@@ -235,7 +235,7 @@ def make_a_transaction(transaction: Transaction, current_user: int = Depends(get
       if not sender or not receiver or not card_holder or not card_number:
             return NotFound(content='Required data not found.')
       
-      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction, card_holder, card_number)]
+      transaction_create = [TransactionView.transaction_view(transaction_create, sender, receiver,direction)]
 
       return transaction_create
 
@@ -275,15 +275,11 @@ def preview_transaction(transaction_id: int, transaction: Transaction, current_u
       if current_user == sender.id and current_user == receiver.id:
          if condition_action == 'edited':
             new_amount = transaction.amount
-            # category_name = transaction.category_name
-            # receiver_id = transaction.receiver_id
-            if new_amount:
-               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+            new_category_name = transaction.category_name
+            new_receiver_id = transaction.receiver_id
+            if new_amount or new_category_name or new_receiver_id:
+               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount, new_category_name, new_receiver_id)
                transaction_ready = transaction_edited
-            # elif category_name:
-            #    pass
-            # elif receiver_id:
-            #    pass
          elif condition_action == 'sent' and transaction.status == 'pending':
             amount = transaction.amount
             status = 'confirmed'
@@ -296,15 +292,11 @@ def preview_transaction(transaction_id: int, transaction: Transaction, current_u
       if current_user == sender.id and current_user != receiver.id:
          if condition_action == 'edited':
             new_amount = transaction.amount
-            # category_name = transaction.category_name
-            # receiver_id = transaction.receiver_id
-            if new_amount:
-               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount)
+            new_category_name = transaction.category_name
+            new_receiver_id = transaction.receiver_id
+            if new_amount or new_category_name or new_receiver_id:
+               transaction_edited = transactions_service.preview_edited_transaction(transaction_id, new_amount, new_category_name, new_receiver_id )
                transaction_ready = transaction_edited
-            # elif category_name:
-            #    pass
-            # elif receiver_id:
-            #    pass
          elif condition_action == 'sent' and transaction.status == 'pending':
             amount = transaction.amount
             status = transaction.status
