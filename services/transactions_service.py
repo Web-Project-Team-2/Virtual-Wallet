@@ -22,7 +22,7 @@ id_transactions = '''SELECT id, status, `condition`, transaction_date, amount, c
 values_transactions = '''INSERT INTO transactions(id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                          VALUES(?,?,?,?,?,?,?,?,?)'''
 
-def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
+async def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
      '''
      This function returns a list of all the transactions for the specified user.\n
      Parameters:\n
@@ -53,14 +53,14 @@ def view_all_transactions(current_user: int, transaction_date: str, sender: str,
                     filter_by.append(f'receiver_id like "%{current_user}%"')
 
           if filter_by:
-               sql_transactions += ' WHERE ' + ' AND '.join(filter_by)
-          
-          return (Transaction.from_query_result(*row) for row in read_query(sql=sql_transactions))
+               sql_query += sql_transactions + ' WHERE ' + ' AND '.join(filter_by)
+               rows = await read_query(sql=sql_query)
+               return [Transaction.from_query_result(*row) for row in rows]
      
      else:
-          transactions_incoming = read_query(sql=receiver_id_transactions,
+          transactions_incoming = await read_query(sql=receiver_id_transactions,
                                              sql_params=(current_user,))
-          transactions_outgoing = read_query(sql=sender_id_transactions,
+          transactions_outgoing = await read_query(sql=sender_id_transactions,
                                              sql_params=(current_user,))
           transactions = transactions_incoming + transactions_outgoing
 
@@ -82,7 +82,7 @@ def sort_transactions(transactions: list[Transaction], *, attribute='transaction
      return sorted(transactions, key=sort_fn, reverse=reverse)
 
 
-def view_transaction_by_id(transaction_id: int, current_user: int):
+async def view_transaction_by_id(transaction_id: int, current_user: int):
      '''
      This function returns a more detailed information about a user's transactions.\n
      Parameters:\n
@@ -92,14 +92,14 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
           - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
           - This parameter is used to ensure that the request is made by an authenticated user.
      '''
-     transactions_outgoing = read_query(sql=sender_id_transactions,
+     transactions_outgoing = await read_query(sql=sender_id_transactions,
                                         sql_params=(current_user,))
-     transactions_incoming = read_query(sql=receiver_id_transactions,
+     transactions_incoming = await read_query(sql=receiver_id_transactions,
                                         sql_params=(current_user,))
      transactions_all = transactions_outgoing + transactions_incoming
 
      if transactions_all:
-          transaction_by_id = read_query(sql=id_transactions,
+          transaction_by_id = await read_query(sql=id_transactions,
                                          sql_params=(transaction_id,))
      else:
           return None
@@ -112,7 +112,7 @@ def view_transaction_by_id(transaction_id: int, current_user: int):
           return transaction 
 
 
-def create_transaction_to_users_wallet(transaction: Transaction, current_user: int):
+async def create_transaction_to_users_wallet(transaction: Transaction, current_user: int):
      '''This function makes a transaction to the user wallet's ballance.
      Parameters:
      transaction : Transaction
@@ -125,9 +125,9 @@ def create_transaction_to_users_wallet(transaction: Transaction, current_user: i
      receiver_id = current_user
      cards_user_id = current_user
 
-     card_id = get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
      
-     generated_id = insert_query(
+     generated_id = await insert_query(
                     sql=values_transactions,
                     sql_params=(transaction.id,
                                 transaction.status, 
@@ -144,7 +144,7 @@ def create_transaction_to_users_wallet(transaction: Transaction, current_user: i
      return transaction
 
 
-def create_transaction_to_users_balance(transaction: Transaction, current_user: int):
+async def create_transaction_to_users_balance(transaction: Transaction, current_user: int):
      '''
      This function makes a transaction to another user or category.\n
      Parameters:
@@ -155,9 +155,9 @@ def create_transaction_to_users_balance(transaction: Transaction, current_user: 
      receiver_id = transaction.receiver_id
      cards_user_id = current_user
 
-     card_id = get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
 
-     generated_id = insert_query(
+     generated_id = await insert_query(
                     sql=values_transactions,
                     sql_params=(transaction.id,
                                 transaction.status,
@@ -174,7 +174,7 @@ def create_transaction_to_users_balance(transaction: Transaction, current_user: 
      return transaction
 
 
-def create_transaction_to_users_category(transaction: Transaction, current_user: int):
+async def create_transaction_to_users_category(transaction: Transaction, current_user: int):
      '''
      This function makes a transaction to another user or category.\n
      Parameters:
@@ -185,9 +185,9 @@ def create_transaction_to_users_category(transaction: Transaction, current_user:
      receiver_id = transaction.receiver_id
      cards_user_id = current_user
 
-     card_id = get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
 
-     generated_id = insert_query(
+     generated_id = await insert_query(
                     sql=values_transactions,
                     sql_params=(transaction.id,
                                 transaction.status, 
@@ -204,7 +204,7 @@ def create_transaction_to_users_category(transaction: Transaction, current_user:
      return transaction
 
 
-def preview_edited_transaction(transaction_id: int, new_amount: float, new_category_name: str, new_receiver_id: int):
+async def preview_edited_transaction(transaction_id: int, new_amount: float, new_category_name: str, new_receiver_id: int):
      transactions = read_query(sql=id_transactions,
                                sql_params=(transaction_id,))
 
@@ -214,13 +214,13 @@ def preview_edited_transaction(transaction_id: int, new_amount: float, new_categ
         return None 
 
      if new_amount:
-          edited_transaction = update_query(sql='UPDATE transactions SET amount = ? WHERE id = ?',
+          edited_transaction = await update_query(sql='UPDATE transactions SET amount = ? WHERE id = ?',
                                             sql_params=(new_amount, transaction_id))
      if new_category_name:
-          edited_transaction = update_query(sql='UPDATE transactions SET category_name = ? WHERE id = ?',
+          edited_transaction = await update_query(sql='UPDATE transactions SET category_name = ? WHERE id = ?',
                                             sql_params=(new_category_name, transaction_id))
      if new_receiver_id:
-          edited_transaction = update_query(sql='UPDATE transactions SET reveiver_id = ? WHERE id = ?',
+          edited_transaction = await update_query(sql='UPDATE transactions SET reveiver_id = ? WHERE id = ?',
                                             sql_params=(new_receiver_id, transaction_id))
           
      edited_transactions = read_query(sql=id_transactions,
@@ -231,9 +231,9 @@ def preview_edited_transaction(transaction_id: int, new_amount: float, new_categ
      return edited_transaction
 
 
-def preview_sent_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-     transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+async def preview_sent_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+     transactions = await read_query(sql=id_transactions,
+                                     sql_params=(transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
@@ -244,23 +244,23 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, co
      receiver_id = transaction.receiver_id
      cards_id = transaction.cards_id
 
-     sent_transaction = update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
-                                     sql_params=(status, condition_action, transaction_id))
+     sent_transaction = await update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                           sql_params=(status, condition_action, transaction_id))
      
      if current_user == transaction.sender_id and current_user == transaction.receiver_id:
           # updated_card_balance
-          update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
+          await update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
                        sql_params=(amount, cards_id))
      if current_user == sender_id and current_user != receiver_id:
           # updated_user_balance
-          update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
+          await update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
                        sql_params=(amount, sender_id))
      if current_user == sender_id and current_user == receiver_id:
           # updated_user_balance
-          update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+          await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
                        sql_params=(amount, receiver_id))
 
-     sent_transactions = read_query(sql=id_transactions,
+     sent_transactions = await read_query(sql=id_transactions,
                                     sql_params=(transaction_id,))
 
      sent_transaction = next((Transaction.from_query_result(*row) for row in sent_transactions), None)
@@ -268,9 +268,9 @@ def preview_sent_transaction(transaction_id: int, amount: float, status: str, co
      return sent_transaction
 
 
-def preview_confirm_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-     transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+async def preview_confirm_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+     transactions = await read_query(sql=id_transactions,
+                                     sql_params=(transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
@@ -280,35 +280,35 @@ def preview_confirm_transaction(transaction_id: int, amount: float, status: str,
      sender_id = transaction.sender_id
      receiver_id = transaction.receiver_id
 
-     confirmed_transaction = update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
-                                          sql_params=(status, condition_action, transaction_id))
+     confirmed_transaction = await update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                                sql_params=(status, condition_action, transaction_id))
 
      if current_user != sender_id and current_user == receiver_id:
           # updated_user_balance
-          update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
-                       sql_params=(amount, receiver_id))
+          await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+                             sql_params=(amount, receiver_id))
           
-     confirmed_transactions = read_query(sql=id_transactions,
-                                         sql_params=(transaction_id,))
+     confirmed_transactions = await read_query(sql=id_transactions,
+                                               sql_params=(transaction_id,))
 
      confirmed_transaction = next((Transaction.from_query_result(*row) for row in confirmed_transactions), None)
 
      return confirmed_transaction
 
 
-def preview_cancel_transaction(transaction_id: int, status: str, condition_action: str):
-     transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+async def preview_cancel_transaction(transaction_id: int, status: str, condition_action: str):
+     transactions = await read_query(sql=id_transactions,
+                                     sql_params=(transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
      if transaction is None:
         return None 
 
-     cancelled_transaction = update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+     cancelled_transaction = await update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
                                           sql_params=(status, condition_action, transaction_id))
      
-     cancelled_transactions = read_query(sql=id_transactions,
+     cancelled_transactions = await read_query(sql=id_transactions,
                                          sql_params=(transaction_id,))
 
      cancelled_transaction = next((Transaction.from_query_result(*row) for row in cancelled_transactions), None)
@@ -316,9 +316,9 @@ def preview_cancel_transaction(transaction_id: int, status: str, condition_actio
      return cancelled_transaction
 
 
-def preview_decline_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-     transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+async def preview_decline_transaction(transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+     transactions = await read_query(sql=id_transactions,
+                                     sql_params=(transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
@@ -329,30 +329,30 @@ def preview_decline_transaction(transaction_id: int, amount: float, status: str,
      sender = transaction.sender_id
 
      # updated_user_balance
-     update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
-                  sql_params=(declined_amount, sender))
+     await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+                        sql_params=(declined_amount, sender))
 
-     declined_transaction = update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
-                                         sql_params=(status, condition_action, transaction_id))
+     declined_transaction = await update_query(sql='UPDATE transactions SET status = ?, `condition` = ? WHERE id = ?',
+                                               sql_params=(status, condition_action, transaction_id))
 
-     declined_transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+     declined_transactions = await read_query(sql=id_transactions,
+                                              sql_params=(transaction_id,))
 
      declined_transaction = next((Transaction.from_query_result(*row) for row in declined_transactions), None)
 
      return declined_transaction
 
 
-def transaction_id_exists(transaction_id: int):
+async def transaction_id_exists(transaction_id: int):
      '''Explanation to follow.\n
      Parameters explanation to follow.
      '''
-     return any(read_query(sql=id_transactions,
+     return any(await read_query(sql=id_transactions,
                                     sql_params=(transaction_id,)))
 
 
-def get_user_by_id(user_id: int):
-    user_data = read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+async def get_user_by_id(user_id: int):
+    user_data = await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
                                   FROM users
                                   WHERE id = ?''',
                            sql_params=(user_id,))
@@ -362,7 +362,7 @@ def get_user_by_id(user_id: int):
     return user
 
 
-def get_user_by_status(user_id: int) -> str:
+async def get_user_by_status(user_id: int) -> str:
      '''
      This function retrieves the status of a user from the database based on their user ID.
     
@@ -371,7 +371,7 @@ def get_user_by_status(user_id: int) -> str:
           The ID of the user whose status is being retrieved.
 
     '''
-     user_status = read_query(sql='''SELECT status
+     user_status = await read_query(sql='''SELECT status
                                      FROM users
                                      WHERE id = ?''',
                                      sql_params=(user_id,))
@@ -381,8 +381,8 @@ def get_user_by_status(user_id: int) -> str:
      return user_status
 
 
-def get_category_by_id(category_id: int):
-    category_data = read_query(sql='SELECT id, name FROM categories WHERE id = ?',
+async def get_category_by_id(category_id: int):
+    category_data = await read_query(sql='SELECT id, name FROM categories WHERE id = ?',
                                sql_params=(category_id,))
 
     category = next((Category.from_query_result(*row) for row in category_data), None)
@@ -390,8 +390,8 @@ def get_category_by_id(category_id: int):
     return category
 
 
-def get_card_by_id(card_id: int):
-    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+async def get_card_by_id(card_id: int):
+    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
                                   FROM cards
                                   WHERE id = ?''',
                                   sql_params=(card_id,))
@@ -401,8 +401,8 @@ def get_card_by_id(card_id: int):
     return card
 
 
-def get_card_by_user_id(cards_user_id: int):
-    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+async def get_card_by_user_id(cards_user_id: int):
+    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
                                   FROM cards
                                   WHERE user_id = ?''',
                                   sql_params=(cards_user_id,))
@@ -414,14 +414,14 @@ def get_card_by_user_id(cards_user_id: int):
     return card_id
 
 
-def user_id_exists(user_id: int):
-    return any(read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
+async def user_id_exists(user_id: int):
+    return any(await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
                                           FROM users 
                                           WHERE id = ?''',
                                    sql_params=(user_id,)))
 
 
-def contact_id_exists(current_user: int, reciever_id: int):
+async def contact_id_exists(current_user: int, reciever_id: int):
      '''
      This function checks if a contact exists between the current user and the receiver.
      Parameters:
@@ -430,7 +430,7 @@ def contact_id_exists(current_user: int, reciever_id: int):
      reciever_id : int
           The ID of the receiver to check the contact against.
      '''
-     return any(read_query(sql='''SELECT users_id, contact_user_id
+     return any(await read_query(sql='''SELECT users_id, contact_user_id
                                            FROM contacts 
                                            WHERE users_id = ? AND contact_user_id = ?''',
                                     sql_params=(current_user, reciever_id,)))

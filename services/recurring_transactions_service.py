@@ -19,7 +19,7 @@ id_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payme
 values_recurring_transactions = '''INSERT INTO recurring_transactions(id, recurring_transaction_date, next_payment, status, `condition`, amount, sender_id, receiver_id, categories_id) 
                                    VALUES(?,?,?,?,?,?,?,?,?)'''
 
-def view_all_recurring_transactions(current_user: int ,
+async def view_all_recurring_transactions(current_user: int ,
                                     recurring_transaction_date: str | None = None,
                                     categories_id: int | None = None):
     '''
@@ -39,12 +39,12 @@ def view_all_recurring_transactions(current_user: int ,
             filter_by.append(f'categories_id like "%{categories_id}%"')
 
         if filter_by:
-            sql_recurring_transactions += ' WHERE ' + ' AND '.join(filter_by)
-          
-        return (RecurringTransaction.from_query_result(*row) for row in read_query(sql=sql_recurring_transactions))
+            sql_query += sql_recurring_transactions + ' WHERE ' + ' AND '.join(filter_by)
+            rows = await read_query(sql=sql_query)
+            return [RecurringTransaction.from_query_result(*row) for row in rows]
      
     else:
-        recurring_transactions = read_query(sql=sender_id_recurring_transactions,
+        recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
                                             sql_params=(current_user,))
 
         recurring_transactions_all = []
@@ -67,7 +67,7 @@ def sort_recurring_transactions(recurring_transactions: list[RecurringTransactio
     return sorted(recurring_transactions, key=sort_fn, reverse=reverse)
 
 
-def view_recurring_transaction_by_id(recurring_transaction_id: int, current_user: int):
+async def view_recurring_transaction_by_id(recurring_transaction_id: int, current_user: int):
     '''
     This function returns a more detailed information about a user's transactions.\n
     Parameters:\n
@@ -77,11 +77,11 @@ def view_recurring_transaction_by_id(recurring_transaction_id: int, current_user
         - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
         - This parameter is used to ensure that the request is made by an authenticated user.
     '''
-    recurring_transactions = read_query(sql=sender_id_recurring_transactions,
+    recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
                                         sql_params=(current_user,))
 
     if recurring_transactions:
-        recurring_transaction_by_id = read_query(sql=id_recurring_transactions,
+        recurring_transaction_by_id = await read_query(sql=id_recurring_transactions,
                                                  sql_params=(recurring_transaction_id,))
     else:
         return None
@@ -93,14 +93,14 @@ def view_recurring_transaction_by_id(recurring_transaction_id: int, current_user
     else:
         return recurring_transaction 
 
-def create_recurring_transaction(recurring_transaction: RecurringTransaction):
+async def create_recurring_transaction(recurring_transaction: RecurringTransaction):
     '''
     This function makes a transaction to another user or category.\n
     Parameters:
     transaction : Transaction
     The transaction details to be added to the user's wallet.
     '''
-    generated_id = insert_query(sql=values_recurring_transactions,
+    generated_id = await insert_query(sql=values_recurring_transactions,
                                 sql_params=(recurring_transaction.id,
                                             recurring_transaction.recurring_transaction_date,
                                             recurring_transaction.next_payment,
@@ -116,8 +116,8 @@ def create_recurring_transaction(recurring_transaction: RecurringTransaction):
     return recurring_transaction
 
 
-def preview_edited_recurring_transaction(recurring_transaction_id: int, new_amount: float, new_category_name: str, new_receiver_id: int):
-    recurring_transactions = read_query(sql=id_recurring_transactions,
+async def preview_edited_recurring_transaction(recurring_transaction_id: int, new_amount: float, new_category_name: str, new_receiver_id: int):
+    recurring_transactions = await read_query(sql=id_recurring_transactions,
                                         sql_params=(recurring_transaction_id,))
 
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transactions), None)
@@ -126,16 +126,16 @@ def preview_edited_recurring_transaction(recurring_transaction_id: int, new_amou
         return None 
 
     if new_amount:
-        edited_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET amount = ? WHERE id = ?',
+        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET amount = ? WHERE id = ?',
                                                     sql_params=(new_amount, recurring_transaction_id))
     if new_category_name:
-        edited_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET category_name = ? WHERE id = ?',
+        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET category_name = ? WHERE id = ?',
                                                     sql_params=(new_category_name, recurring_transaction_id))
     if new_receiver_id:
-        edited_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET reveiver_id = ? WHERE id = ?',
+        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET reveiver_id = ? WHERE id = ?',
                                                     sql_params=(new_receiver_id, recurring_transaction_id))
           
-    edited_recurring_transactions = read_query(sql=id_recurring_transactions,
+    edited_recurring_transactions = await read_query(sql=id_recurring_transactions,
                                                sql_params=(recurring_transaction_id,))
 
     edited_recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in edited_recurring_transactions), None)
@@ -143,8 +143,8 @@ def preview_edited_recurring_transaction(recurring_transaction_id: int, new_amou
     return edited_recurring_transaction
 
 
-def preview_send_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-    recurring_transactions = read_query(sql=id_recurring_transactions,
+async def preview_send_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+    recurring_transactions = await read_query(sql=id_recurring_transactions,
                                         sql_params=(recurring_transaction_id,))
 
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transactions), None)
@@ -156,23 +156,23 @@ def preview_send_recurring_transaction(recurring_transaction_id: int, amount: fl
     receiver_id = recurring_transaction.receiver_id
     cards_id = recurring_transaction.cards_id
 
-    sent_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
+    sent_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
                                               sql_params=(status, condition_action, recurring_transaction_id))
      
     if current_user == recurring_transaction.sender_id and current_user == recurring_transaction.receiver_id:
         # updated_card_balance
-        update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
+        await update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
                      sql_params=(amount, cards_id))
     if current_user == sender_id and current_user != receiver_id:
         # updated_user_balance
-        update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
+        await update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
                      sql_params=(amount, sender_id))
     if current_user == sender_id and current_user == receiver_id:
         # updated_user_balance
-        update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+        await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
                      sql_params=(amount, receiver_id))
 
-    sent_recurring_transactions = read_query(sql=id_recurring_transactions,
+    sent_recurring_transactions = await read_query(sql=id_recurring_transactions,
                                              sql_params=(recurring_transaction_id,))
 
     sent_recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in sent_recurring_transactions), None)
@@ -180,8 +180,8 @@ def preview_send_recurring_transaction(recurring_transaction_id: int, amount: fl
     return sent_recurring_transaction
 
 
-def preview_confirm_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-    recurring_transactions = read_query(sql=id_recurring_transactions,
+async def preview_confirm_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+    recurring_transactions = await read_query(sql=id_recurring_transactions,
                                         sql_params=(recurring_transaction_id,))
 
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transactions), None)
@@ -192,16 +192,16 @@ def preview_confirm_recurring_transaction(recurring_transaction_id: int, amount:
     sender_id = recurring_transaction.sender_id
     receiver_id = recurring_transaction.receiver_id
 
-    confirmed_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
+    confirmed_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
                                                    sql_params=(status, condition_action, recurring_transaction_id))
 
     if current_user != sender_id and current_user == receiver_id:
         # updated_user_balance
-        update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+        await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
                      sql_params=(amount, receiver_id))
           
 
-    confirmed_recurring_transactions = read_query(sql=id_recurring_transactions,
+    confirmed_recurring_transactions = await read_query(sql=id_recurring_transactions,
                                                   sql_params=(recurring_transaction_id,))
 
     confirmed_recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in confirmed_recurring_transactions), None)
@@ -209,8 +209,8 @@ def preview_confirm_recurring_transaction(recurring_transaction_id: int, amount:
     return confirmed_recurring_transaction
 
 
-def preview_cancel_recurring_transaction(recurring_transaction_id: int, status: str, condition_action: str):
-    recurring_transactions = read_query(sql=id_recurring_transactions,
+async def preview_cancel_recurring_transaction(recurring_transaction_id: int, status: str, condition_action: str):
+    recurring_transactions = await read_query(sql=id_recurring_transactions,
                                         sql_params=(recurring_transaction_id,))
 
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transactions), None)
@@ -218,11 +218,11 @@ def preview_cancel_recurring_transaction(recurring_transaction_id: int, status: 
     if recurring_transaction is None:
         return None 
 
-    cancelled_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
+    cancelled_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
                                                    sql_params=(status, condition_action, recurring_transaction_id))
      
 
-    cancelled_recurring_transactions = read_query(sql=id_recurring_transactions,
+    cancelled_recurring_transactions = await read_query(sql=id_recurring_transactions,
                                                   sql_params=(recurring_transaction_id,))
 
     cancelled_recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in cancelled_recurring_transactions), None)
@@ -230,8 +230,8 @@ def preview_cancel_recurring_transaction(recurring_transaction_id: int, status: 
     return cancelled_recurring_transaction
 
 
-def preview_decline_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
-    recurring_transactions = read_query(sql=id_recurring_transactions,
+async def preview_decline_recurring_transaction(recurring_transaction_id: int, amount: float, status: str, condition_action: str, current_user: int):
+    recurring_transactions = await read_query(sql=id_recurring_transactions,
                                         sql_params=(recurring_transaction_id,))
 
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transactions), None)
@@ -243,14 +243,14 @@ def preview_decline_recurring_transaction(recurring_transaction_id: int, amount:
     sender = recurring_transaction.sender_id
 
     # updated_user_balance
-    update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+    await update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
                  sql_params=(declined_amount, sender))
 
-    declined_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
+    declined_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
                                                   sql_params=(status, condition_action, recurring_transaction_id))
      
 
-    declined_recurring_transactions = read_query(sql=id_recurring_transactions,
+    declined_recurring_transactions = await read_query(sql=id_recurring_transactions,
                                                  sql_params=(recurring_transaction_id,))
 
     declined_recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in declined_recurring_transactions), None)
@@ -258,24 +258,24 @@ def preview_decline_recurring_transaction(recurring_transaction_id: int, amount:
     return declined_recurring_transaction
 
 
-def recurring_transaction_id_exists(recurring_transaction_id: int):
+async def recurring_transaction_id_exists(recurring_transaction_id: int):
     '''
     Explanation to follow.\n
     Parameters explanation to follow.
     '''
-    return any(read_query(sql=id_recurring_transactions,
+    return any(await read_query(sql=id_recurring_transactions,
                                    sql_params=(recurring_transaction_id,)))
 
 
-def user_id_exists(user_id: int):
-    return any(read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
+async def user_id_exists(user_id: int):
+    return any(await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
                                           FROM users 
                                           WHERE id = ?''',
                                    sql_params=(user_id,)))
 
 
-def get_user_by_id(user_id: int):
-    user_data = read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+async def get_user_by_id(user_id: int):
+    user_data = await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
                                   FROM users
                                   WHERE id = ?''',
                            sql_params=(user_id,))
@@ -285,8 +285,8 @@ def get_user_by_id(user_id: int):
     return user
 
 
-def get_category_by_id(category_id: int):
-    category_data = read_query(sql='SELECT id, name FROM categories WHERE id = ?',
+async def get_category_by_id(category_id: int):
+    category_data = await read_query(sql='SELECT id, name FROM categories WHERE id = ?',
                                sql_params=(category_id,))
 
     category = next((Category.from_query_result(*row) for row in category_data), None)
@@ -294,8 +294,8 @@ def get_category_by_id(category_id: int):
     return category
 
 
-def get_card_by_id(card_id: int):
-    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+async def get_card_by_id(card_id: int):
+    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
                                   FROM cards
                                   WHERE id = ?''',
                            sql_params=(card_id,))
@@ -305,8 +305,8 @@ def get_card_by_id(card_id: int):
     return card
 
 
-def get_card_by_user_id(cards_user_id: int):
-    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+async def get_card_by_user_id(cards_user_id: int):
+    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
                                   FROM cards
                                   WHERE user_id = ?''',
                            sql_params=(cards_user_id,))
