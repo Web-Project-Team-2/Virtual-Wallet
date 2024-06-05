@@ -7,10 +7,8 @@ async def read_query(sql: str, sql_params=()):
         raise RuntimeError("Failed to create connection pool")
 
     async with pool.acquire() as conn:
-        async with conn.cursor() as cursor:
-            await cursor.execute(sql, sql_params)
-            result = await cursor.fetchall()
-            return result
+        result = await conn.fetch(sql, *sql_params)
+        return result
 
 
 async def insert_query(sql: str, sql_params=()) -> int:
@@ -19,10 +17,8 @@ async def insert_query(sql: str, sql_params=()) -> int:
         raise RuntimeError("Failed to create connection pool")
 
     async with pool.acquire() as conn:
-        async with conn.cursor() as cursor:
-            await cursor.execute(sql, sql_params)
-            await conn.commit()
-            return cursor.lastrowid
+        result = await conn.fetchrow(sql, *sql_params)
+        return result['id'] if result and 'id' in result else None
 
 
 async def update_query(sql: str, sql_params=()) -> bool:
@@ -31,10 +27,8 @@ async def update_query(sql: str, sql_params=()) -> bool:
         raise RuntimeError("Failed to create connection pool")
 
     async with pool.acquire() as conn:
-        async with conn.cursor() as cursor:
-            await cursor.execute(sql, sql_params)
-            await conn.commit()
-            return cursor.rowcount
+        result = await conn.execute(sql, *sql_params)
+        return result
 
 
 async def delete_query(sql: str, sql_params=()) -> bool:
@@ -43,7 +37,5 @@ async def delete_query(sql: str, sql_params=()) -> bool:
         raise RuntimeError("Failed to create connection pool")
 
     async with pool.acquire() as conn:
-        async with conn.cursor() as cursor:
-            await cursor.execute(sql, sql_params)
-            await conn.commit()
-            return cursor.rowcount > 0
+        result = await conn.execute(sql, *sql_params)
+        return result == "DELETE 1"

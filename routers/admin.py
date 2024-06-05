@@ -4,7 +4,7 @@ from schemas.transactions import TransactionFilters
 from services import admin_services
 from services.admin_services import view_user_transactions, pending_transactions
 
-admin_router = APIRouter(prefix='/admin')
+admin_router = APIRouter(prefix='/api/admin')
 
 
 @admin_router.get("/all_users", tags=["Admin"])

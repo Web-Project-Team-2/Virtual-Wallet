@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List
 
 
-recurring_transactions_router = APIRouter(prefix='/recurring_transactions')
+recurring_transactions_router = APIRouter(prefix='/api/recurring_transactions')
 
 
 @recurring_transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Recurrung transactions'])  

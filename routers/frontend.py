@@ -56,3 +56,24 @@ async def profile(request: Request, current_user: int = Depends(get_current_user
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return templates.TemplateResponse("profile.html", {"request": request, "user": user_info, "card_info": card_info})
+
+@frontend_router.get("/edit-profile", response_class=HTMLResponse)
+async def edit_profile_form(request: Request, current_user: int = Depends(get_current_user)):
+    user_info = await user_services.view_profile(current_user)
+
+    if not user_info:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return templates.TemplateResponse("edit_profile.html", {"request": request, "user": user_info})
+
+@frontend_router.post("/edit-profile", response_class=HTMLResponse)
+async def edit_profile(request: Request, email: str = Form(...), password: str = Form(...), phone_number: str = Form(...), current_user: int = Depends(get_current_user)):
+    check_password(password)
+    hashed_password = password_hashing.get_password_hash(password)
+    update_result = await user_services.update_profile(current_user, email, hashed_password, phone_number)
+
+    if update_result != "User information updated successfully":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user information")
+
+    return RedirectResponse(url="/profile?message=success", status_code=status.HTTP_303_SEE_OTHER)
+

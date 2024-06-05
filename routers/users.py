@@ -10,11 +10,11 @@ from routers.frontend import templates
 from schemas.contact import ContactCreate
 from schemas.deposit import Deposit
 from schemas.withdraw import WithdrawMoney
-from schemas.user import UserCreate, UserLogin, UserInfoUpdate
+from schemas.user import UserCreate, UserLogin, UserInfoUpdate, UserOut
 
 from services import user_services
 
-users_router = APIRouter(prefix='/users')
+users_router = APIRouter(prefix='/api/users')
 public_router = APIRouter()
 
 
@@ -22,21 +22,26 @@ public_router = APIRouter()
 async def get_register_form(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
-@users_router.post("/register", response_class=HTMLResponse)
-async def register_user(request: Request, username: str = Form(...), password: str = Form(...), email: str = Form(...), phone_number: str = Form(...)):
-    user_create = UserCreate(username=username, password=password, email=email, phone_number=phone_number)
+
+@users_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserOut, tags=["Users"])
+async def register(user_create: UserCreate):
     check_password(user_create.password)
 
     hashed_password = security.password_hashing.get_password_hash(user_create.password)
     user_create.password = hashed_password
 
-    new_user = await user_services.create(user_create.username, user_create.password, user_create.email, user_create.phone_number)
+    new_user = await user_services.create(user_create.username, user_create.password, user_create.email,
+                                          user_create.phone_number)
 
     if not new_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username, email, or phone number is already taken.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Username, email, or phone number is already taken.")
 
-    # Redirect to login page after successful registration with user details
-    return RedirectResponse(url=f"/home_page?email={email}&username={username}&phone_number={phone_number}&message=User registered successfully!", status_code=status.HTTP_303_SEE_OTHER)
+    return UserOut(
+        email=new_user.email,
+        username=new_user.username,
+        phone_number=new_user.phone_number
+    )
 
 
 @users_router.post('/login', tags=["Users"])
@@ -77,8 +82,10 @@ async def create_contact(contact_create: ContactCreate, current_user: int = Depe
     contact_created = await user_services.create_contact(current_user, contact_create.contact_user_id)
 
     if not contact_created:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Unable to create contact. The user might already be a contact or does not exist.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to create contact. The user might already be a contact or does not exist."
+        )
 
     return {"message": "Contact created successfully", "contact_username": contact_created["contact_username"]}
 

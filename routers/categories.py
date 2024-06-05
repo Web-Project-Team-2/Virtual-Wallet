@@ -4,7 +4,7 @@ from common import responses, authorization
 from services import categories_service
 from http import HTTPStatus
 
-categories_router = APIRouter(prefix="/categories")
+categories_router = APIRouter(prefix="/api/categories")
 
 
 @categories_router.get('/', tags=["Categories"])

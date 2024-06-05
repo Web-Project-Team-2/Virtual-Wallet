@@ -9,7 +9,7 @@ from schemas.transactions import TransactionViewAll, TransactionView
 from services import transactions_service
 
 
-transactions_router = APIRouter(prefix='/transactions')
+transactions_router = APIRouter(prefix='/api/transactions')
 
 
 @transactions_router.get('/', response_model=List[TransactionViewAll], status_code=201, tags=['Transactions'])  
