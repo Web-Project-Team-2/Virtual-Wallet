@@ -184,7 +184,7 @@ async def preview_recurring_transaction(recurring_transaction_id: int, recurring
                 elif condition_action == 'sent' and recurring_transaction.status == 'pending':
                     amount = recurring_transaction.amount
                     status = 'confirmed'
-                    transaction_sent = await recurring_transactions_service.preview_sent_recurring_transaction(transaction_id=recurring_transaction_id,
+                    transaction_sent = await recurring_transactions_service.preview_send_recurring_transaction(transaction_id=recurring_transaction_id,
                                                                                                         amount=amount,
                                                                                                         status=status,
                                                                                                         condition_action=condition_action,
