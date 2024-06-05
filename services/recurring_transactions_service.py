@@ -32,7 +32,6 @@ def view_all_recurring_transactions(current_user: int ,
         - Filter transactions by a specific date.\n
     '''
     if recurring_transaction_date or categories_id:
-        
         filter_by = []
         if recurring_transaction_date:
             filter_by.append(f'recurring_transaction_date like "%{recurring_transaction_date}%"')
@@ -161,18 +160,17 @@ def preview_send_recurring_transaction(recurring_transaction_id: int, amount: fl
                                               sql_params=(status, condition_action, recurring_transaction_id))
      
     if current_user == recurring_transaction.sender_id and current_user == recurring_transaction.receiver_id:
-          # updated_card_balance
-          update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
-                                         sql_params=(amount, cards_id))
-
+        # updated_card_balance
+        update_query(sql='UPDATE cards SET balance = balance - ? WHERE id = ?',
+                     sql_params=(amount, cards_id))
     if current_user == sender_id and current_user != receiver_id:
-          # updated_user_balance
-          update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
-                                              sql_params=(amount, sender_id))
+        # updated_user_balance
+        update_query(sql='UPDATE users SET balance = balance - ? WHERE id = ?',
+                     sql_params=(amount, sender_id))
     if current_user == sender_id and current_user == receiver_id:
-          # updated_user_balance
-          update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
-                                              sql_params=(amount, receiver_id))
+        # updated_user_balance
+        update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
+                     sql_params=(amount, receiver_id))
 
     sent_recurring_transactions = read_query(sql=id_recurring_transactions,
                                              sql_params=(recurring_transaction_id,))
@@ -246,7 +244,7 @@ def preview_decline_recurring_transaction(recurring_transaction_id: int, amount:
 
     # updated_user_balance
     update_query(sql='UPDATE users SET balance = balance + ? WHERE id = ?',
-                                              sql_params=(declined_amount, sender))
+                 sql_params=(declined_amount, sender))
 
     declined_recurring_transaction = update_query(sql='UPDATE recurring_transactions SET status = ?, `condition` = ? WHERE id = ?',
                                                   sql_params=(status, condition_action, recurring_transaction_id))
@@ -270,17 +268,17 @@ def recurring_transaction_id_exists(recurring_transaction_id: int):
 
 
 def user_id_exists(user_id: int):
-    return any(read_query(
-        '''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
-               FROM users 
-               WHERE id = ?''',
-        (user_id,)))
+    return any(read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
+                                          FROM users 
+                                          WHERE id = ?''',
+                                   sql_params=(user_id,)))
 
 
 def get_user_by_id(user_id: int):
-    user_data = read_query('''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
-                              FROM users
-                              WHERE id = ?''', (user_id,))
+    user_data = read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+                                  FROM users
+                                  WHERE id = ?''',
+                           sql_params=(user_id,))
     
     user = next((User.from_query_result(*row) for row in user_data), None)
 
@@ -288,9 +286,8 @@ def get_user_by_id(user_id: int):
 
 
 def get_category_by_id(category_id: int):
-    category_data = read_query(
-        'SELECT id, name FROM categories WHERE id = ?',
-        (category_id,))
+    category_data = read_query(sql='SELECT id, name FROM categories WHERE id = ?',
+                               sql_params=(category_id,))
 
     category = next((Category.from_query_result(*row) for row in category_data), None)
 
@@ -298,9 +295,10 @@ def get_category_by_id(category_id: int):
 
 
 def get_card_by_id(card_id: int):
-    card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                              FROM cards
-                              WHERE id = ?''', (card_id,))
+    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+                                  FROM cards
+                                  WHERE id = ?''',
+                           sql_params=(card_id,))
     
     card = next((Card.from_query_result(*row) for row in card_data), None)
 
@@ -308,9 +306,10 @@ def get_card_by_id(card_id: int):
 
 
 def get_card_by_user_id(cards_user_id: int):
-    card_data = read_query('''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                              FROM cards
-                              WHERE user_id = ?''', (cards_user_id,))
+    card_data = read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
+                                  FROM cards
+                                  WHERE user_id = ?''',
+                           sql_params=(cards_user_id,))
     
     card = next((Card.from_query_result(*row) for row in card_data), None)
 
