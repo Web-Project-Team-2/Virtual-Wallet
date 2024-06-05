@@ -59,9 +59,9 @@ async def view_all_transactions(current_user: int, transaction_date: str, sender
      
      else:
           transactions_incoming = await read_query(sql=receiver_id_transactions,
-                                             sql_params=(current_user,))
+                                                   sql_params=(current_user,))
           transactions_outgoing = await read_query(sql=sender_id_transactions,
-                                             sql_params=(current_user,))
+                                                   sql_params=(current_user,))
           transactions = transactions_incoming + transactions_outgoing
 
           transactions_all = []
