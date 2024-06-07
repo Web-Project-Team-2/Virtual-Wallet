@@ -127,8 +127,7 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
     '''
 
     generated_id = await insert_query(sql=values_recurring_transactions,
-                                      sql_params=(recurring_transaction.id,
-                                                  recurring_transaction.recurring_transaction_date,
+                                      sql_params=(recurring_transaction.recurring_transaction_date,
                                                   recurring_transaction.next_payment,
                                                   recurring_transaction.status,
                                                   recurring_transaction.condition,

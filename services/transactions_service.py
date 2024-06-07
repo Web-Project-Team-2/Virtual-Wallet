@@ -163,8 +163,7 @@ async def create_transaction_to_users_wallet(transaction: Transaction,
      card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
      
      generated_id = await insert_query(sql=values_transactions,
-                                       sql_params=(transaction.id,
-                                                   transaction.status, 
+                                       sql_params=(transaction.status, 
                                                    transaction.condition,
                                                    transaction.transaction_date,
                                                    transaction.amount,
@@ -197,8 +196,7 @@ async def create_transaction_to_users_balance(transaction: Transaction,
      card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
 
      generated_id = await insert_query(sql=values_transactions,
-                                       sql_params=(transaction.id,
-                                                   transaction.status,
+                                       sql_params=(transaction.status,
                                                    transaction.condition,
                                                    transaction.transaction_date,
                                                    transaction.amount,
@@ -231,8 +229,7 @@ async def create_transaction_to_users_category(transaction: Transaction,
      card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
 
      generated_id = await insert_query(sql=values_transactions,
-                                       sql_params=(transaction.id,
-                                                   transaction.status, 
+                                       sql_params=(transaction.status, 
                                                    transaction.condition, 
                                                    transaction.transaction_date, 
                                                    transaction.amount,
