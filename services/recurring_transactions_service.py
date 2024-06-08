@@ -4,8 +4,7 @@ from data.models.cards import Card
 from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
 
-
-sql_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payment, status, `condition`, amount, sender_id, receiver_id, categories_id
+base_sql_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payment, status, `condition`, amount, sender_id, receiver_id, categories_id
                                 FROM recurring_transactions'''
 
 sender_id_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payment, status, `condition`, amount, sender_id, receiver_id, categories_id
@@ -19,30 +18,40 @@ id_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payme
 values_recurring_transactions = '''INSERT INTO recurring_transactions(id, recurring_transaction_date, next_payment, status, `condition`, amount, sender_id, receiver_id, categories_id) 
                                    VALUES(?,?,?,?,?,?,?,?,?)'''
 
-def view_all_recurring_transactions(current_user: int ,
+
+def view_all_recurring_transactions(current_user: int,
                                     recurring_transaction_date: str | None = None,
                                     categories_id: int | None = None):
     '''
-    This function returns a list of all the recurring transactions for the specified user.\n
-    Parameters:\n
-    - current_user: int\n
-        - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-        - This parameter is used to ensure that the request is made by an authenticated user.\n
-    - transaction_date: str | None\n
-        - Filter transactions by a specific date.\n
+    This function returns a list of all the recurring transactions for the specified user.
+
+    Parameters:
+    - current_user: int
+        - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
+        - This parameter is used to ensure that the request is made by an authenticated user.
+    - transaction_date: str | None
+        - Filter transactions by a specific date.
+    - categories_id: int | None
+        - Filter transactions by a specific category ID.
     '''
+    sql = base_sql_recurring_transactions
+    sql_params = []
+
     if recurring_transaction_date or categories_id:
         filter_by = []
         if recurring_transaction_date:
-            filter_by.append(f'recurring_transaction_date like "%{recurring_transaction_date}%"')
+            filter_by.append('recurring_transaction_date LIKE ?')
+            sql_params.append(f'%{recurring_transaction_date}%')
         if categories_id:
-            filter_by.append(f'categories_id like "%{categories_id}%"')
+            filter_by.append('categories_id = ?')
+            sql_params.append(categories_id)
 
         if filter_by:
-            sql_recurring_transactions += ' WHERE ' + ' AND '.join(filter_by)
-          
-        return (RecurringTransaction.from_query_result(*row) for row in read_query(sql=sql_recurring_transactions))
-     
+            sql += ' WHERE ' + ' AND '.join(filter_by)
+
+        return [RecurringTransaction.from_query_result(*row) for row in
+                read_query(sql=sql, sql_params=tuple(sql_params))]
+
     else:
         recurring_transactions = read_query(sql=sender_id_recurring_transactions,
                                             sql_params=(current_user,))

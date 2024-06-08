@@ -4,8 +4,8 @@ from data.models.cards import Card
 from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
 
-sql_transactions = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
-                      FROM transactions'''
+base_sql_transactions = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
+                           FROM transactions'''
 
 sender_id_transactions = '''SELECT id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                             FROM transactions
@@ -22,55 +22,64 @@ id_transactions = '''SELECT id, status, `condition`, transaction_date, amount, c
 values_transactions = '''INSERT INTO transactions(id, status, `condition`, transaction_date, amount, category_name, sender_id, receiver_id, cards_id) 
                          VALUES(?,?,?,?,?,?,?,?,?)'''
 
-def view_all_transactions(current_user: int, transaction_date: str, sender: str, receiver: str, direction: str):
-     '''
-     This function returns a list of all the transactions for the specified user.\n
-     Parameters:\n
-     - current_user: int\n
-          - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
-          - This parameter is used to ensure that the request is made by an authenticated user.\n
-     - transaction_date: str | None\n
-          - Filter transactions by a specific date.\n
-     - sender: int | None\n
-          - Filter transactions by the sender's user ID.\n
-     - receiver: int | None\n
-          - Filter transactions by the receiver's user ID.\n
-     - direction: str | None\n
-          - Filter transactions by direction ('incoming' or 'outgoing').\n
-     '''
-     if transaction_date or sender or receiver or direction:
-          filter_by = []
-          if transaction_date:
-               filter_by.append(f'transaction_date like "%{transaction_date}%"')
-          if sender:
-               filter_by.append(f'sender_id like "%{sender}%"')
-          if receiver:
-               filter_by.append(f'receiver_id like "%{receiver}%"')
-          if direction:
-               if direction == 'outgoing' and current_user == receiver:
-                    filter_by.append(f'sender_id like "%{current_user}%"')
-               elif direction == 'incoming':
-                    filter_by.append(f'receiver_id like "%{current_user}%"')
 
-          if filter_by:
-               sql_transactions += ' WHERE ' + ' AND '.join(filter_by)
-          
-          return (Transaction.from_query_result(*row) for row in read_query(sql=sql_transactions))
-     
-     else:
-          transactions_incoming = read_query(sql=receiver_id_transactions,
-                                             sql_params=(current_user,))
-          transactions_outgoing = read_query(sql=sender_id_transactions,
-                                             sql_params=(current_user,))
-          transactions = transactions_incoming + transactions_outgoing
+def view_all_transactions(current_user: int, transaction_date: str = None, sender: str = None, receiver: str = None,
+                          direction: str = None):
+    '''
+    This function returns a list of all the transactions for the specified user.
 
-          transactions_all = []
-          for row in transactions:
-               transaction = Transaction.from_query_result(*row)
-               if transaction not in transactions_all:
-                    transactions_all.append(transaction)
+    Parameters:
+    - current_user: int
+         - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).
+         - This parameter is used to ensure that the request is made by an authenticated user.
+    - transaction_date: str | None
+         - Filter transactions by a specific date.
+    - sender: str | None
+         - Filter transactions by the sender's user ID.
+    - receiver: str | None
+         - Filter transactions by the receiver's user ID.
+    - direction: str | None
+         - Filter transactions by direction ('incoming' or 'outgoing').
+    '''
+    sql = base_sql_transactions
+    sql_params = []
 
-          return transactions_all
+    if transaction_date or sender or receiver or direction:
+        filter_by = []
+        if transaction_date:
+            filter_by.append('transaction_date LIKE ?')
+            sql_params.append(f'%{transaction_date}%')
+        if sender:
+            filter_by.append('sender_id = ?')
+            sql_params.append(sender)
+        if receiver:
+            filter_by.append('receiver_id = ?')
+            sql_params.append(receiver)
+        if direction:
+            if direction == 'outgoing':
+                filter_by.append('sender_id = ?')
+                sql_params.append(current_user)
+            elif direction == 'incoming':
+                filter_by.append('receiver_id = ?')
+                sql_params.append(current_user)
+
+        if filter_by:
+            sql += ' WHERE ' + ' AND '.join(filter_by)
+
+        return [Transaction.from_query_result(*row) for row in read_query(sql=sql, sql_params=tuple(sql_params))]
+
+    else:
+        transactions_incoming = read_query(sql=receiver_id_transactions, sql_params=(current_user,))
+        transactions_outgoing = read_query(sql=sender_id_transactions, sql_params=(current_user,))
+        transactions = transactions_incoming + transactions_outgoing
+
+        transactions_all = []
+        for row in transactions:
+            transaction = Transaction.from_query_result(*row)
+            if transaction not in transactions_all:
+                transactions_all.append(transaction)
+
+        return transactions_all
 
 
 def sort_transactions(transactions: list[Transaction], *, attribute='transaction_date', reverse=False):
