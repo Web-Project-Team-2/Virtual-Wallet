@@ -18,6 +18,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 30px;
+            position: relative;
         }
         .profile-header {
             text-align: center;
@@ -70,10 +71,18 @@
             justify-content: space-between;
             align-items: center;
         }
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="profile-container">
+        <div class="logout-button">
+            <a class="btn btn-primary" href="/logout">Logout</a>
+        </div>
         <div class="profile-header">
             <h1>User Profile</h1>
         </div>
@@ -84,6 +93,12 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" id="cards-tab" data-toggle="tab" href="#cards" role="tab" aria-controls="cards" aria-selected="false">View Cards</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="deposit-tab" data-toggle="tab" href="#deposit" role="tab" aria-controls="deposit" aria-selected="false">Deposit</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="withdraw-tab" data-toggle="tab" href="#withdraw" role="tab" aria-controls="withdraw" aria-selected="false">Withdraw</a>
                 </li>
             </ul>
             <div class="edit-button">
@@ -184,6 +199,12 @@
                     </div>
                 </div>
             </div>
+            <div class="tab-pane fade" id="deposit" role="tabpanel" aria-labelledby="deposit-tab">
+                {% include 'deposit.html' %}
+            </div>
+            <div class="tab-pane fade" id="withdraw" role="tabpanel" aria-labelledby="withdraw-tab">
+                {% include 'withdraw.html' %}
+            </div>
         </div>
     </div>
 
@@ -198,7 +219,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    Your profile has been successfully updated.
+                    Your transaction has been successfully processed.
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>

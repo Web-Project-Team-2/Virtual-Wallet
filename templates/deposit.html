@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            font-size: 2.5rem;
+        }
+        .alert-success {
+            display: none;
+        }
+        .alert-danger {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Deposit Funds</h1>
+        </div>
+        {% if error_message %}
+        <div class="alert alert-danger" role="alert" id="error-message">
+            {{ error_message }}
+        </div>
+        {% else %}
+        <div class="alert alert-danger" role="alert" id="error-message"></div>
+        {% endif %}
+        <div class="alert alert-success" role="alert" id="success-message">
+            Transaction successful! Redirecting to your profile...
+        </div>
+        <form method="post" action="/deposit" id="deposit-form">
+            <div class="form-group">
+                <label for="iban">IBAN:</label>
+                <input type="text" class="form-control" id="iban" name="iban" required>
+            </div>
+            <div class="form-group">
+                <label for="bank_name">Bank Name:</label>
+                <input type="text" class="form-control" id="bank_name" name="bank_name" required>
+            </div>
+            <div class="form-group">
+                <label for="account_holder">Account Holder Name:</label>
+                <input type="text" class="form-control" id="account_holder" name="account_holder" required>
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount:</label>
+                <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Deposit</button>
+            </div>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById('deposit-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const errorMessage = document.getElementById('error-message');
+            const successMessage = document.getElementById('success-message');
+            if (amount < 25) {
+                errorMessage.textContent = "Minimum deposit is $25.";
+                errorMessage.style.display = 'block';
+                successMessage.style.display = 'none';
+                return;
+            }
+            errorMessage.style.display = 'none';
+            const form = event.target;
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    window.location.href = '/profile';
+                }, 3000); // Redirect after 3 seconds
+            } else {
+                const error = await response.text();
+                errorMessage.textContent = `Error: ${error}`;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

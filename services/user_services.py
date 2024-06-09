@@ -177,34 +177,22 @@ async def update_profile(user_id: int, email: str, password: str, phone_number: 
 async def deposit_money(user_id: int, balance: int):
     if balance < 25:
         return "Minimum deposit is $25."
-
     get_user_balance = await read_query('SELECT balance from users WHERE id=$1', (user_id,))
     new_balance = balance + get_user_balance[0][0]
-
-    update_result = await update_query(
-        'UPDATE users SET balance = $1 WHERE id = $2',
-        (new_balance, user_id)
-    )
-
+    update_result = await update_query('UPDATE users SET balance = $1 WHERE id = $2', (new_balance, user_id))
     if update_result:
-        return f"You have successfully deposited ${balance} into your virtual wallet."
+        return "You have successfully deposited ${balance} into your virtual wallet."
     else:
         return f"Unable to deposit ${balance} into your account."
 
-
 async def withdraw_money(user_id: int, withdraw: int):
     get_user_balance = await read_query('SELECT balance from users WHERE id=$1', (user_id,))
-
     if withdraw > get_user_balance[0][0]:
         return "Unable to withdraw. You don't have enough cash in your virtual wallet."
     new_balance = get_user_balance[0][0] - withdraw
-
-    update_result = await update_query(
-        'UPDATE users SET balance = $1 WHERE id = $2',
-        (new_balance, user_id)
-    )
-
+    update_result = await update_query('UPDATE users SET balance = $1 WHERE id = $2', (new_balance, user_id))
     if update_result:
-        return f"You have successfully withdraw ${withdraw} from your virtual wallet."
+        return "You have successfully withdrawn ${withdraw} from your virtual wallet."
     else:
         return f"Unable to withdraw ${withdraw} into your account."
+
