@@ -159,14 +159,10 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
         recurring_transaction.recurring_transaction_date = datetime.now()
     if not recurring_transaction.next_payment:
         recurring_transaction.next_payment = datetime.now() + timedelta(days=30)
-    if not recurring_transaction.category_name:
-        recurring_transaction.category_name = 'no category'
     if not recurring_transaction.status:
         recurring_transaction.status = 'pending'
     if not recurring_transaction.condition:
         recurring_transaction.condition = 'edited'
-
-    recurring_transaction_create = await recurring_transactions_service.create_recurring_transaction(recurring_transaction=recurring_transaction)
     
     if contact == True and receiver_status != 'pending' and receiver_status != 'blocked':
         recurring_transaction_create = await recurring_transactions_service.create_recurring_transaction(recurring_transaction=recurring_transaction)
@@ -187,7 +183,7 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
     return recurring_transaction_create
 
 
-@recurring_transactions_router.put(path='/preview/id/{transaction_id}', status_code=201, tags=['Recurrung transactions'])  
+@recurring_transactions_router.put(path='/preview/id/{recurring_transaction_id}', status_code=201, tags=['Recurrung transactions'])  
 async def preview_recurring_transaction(recurring_transaction_id: int,
                                         recurring_transaction: RecurringTransaction,
                                         current_user: int = Depends(dependency=get_current_user)):
@@ -206,10 +202,10 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
     if await recurring_transactions_service.recurring_transaction_id_exists(recurring_transaction_id=recurring_transaction_id):
         sender = await user_services.get_user_by_id(user_id=recurring_transaction.sender_id)
         receiver = await user_services.get_user_by_id(user_id=recurring_transaction.receiver_id)
-        category_name = await categories_service.get_category_by_id(category_id=recurring_transaction.categories_id)
+        category = await categories_service.get_category_by_id(category_id=recurring_transaction.categories_id)
 
         condition_action = recurring_transaction.condition
-        category_name = category_name.name
+        category_name = category.name
 
         if recurring_transaction.status == 'pending' and recurring_transaction.condition == 'edited': 
             message = f'This transaction hasn\'t been sent.'
@@ -222,12 +218,12 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             if condition_action == 'edited':
                 new_next_payment = recurring_transaction.next_payment
                 new_amount = recurring_transaction.amount
-                new_category_name = recurring_transaction.category_name
+                new_categories_id = recurring_transaction.categories_id
                 new_receiver_id = recurring_transaction.receiver_id
-                recurring_transaction_edited = await recurring_transactions_service.preview_edited_recurring_transaction(transaction_id=recurring_transaction_id,
+                recurring_transaction_edited = await recurring_transactions_service.preview_edited_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
                                                                                                                          new_next_payment=new_next_payment,
                                                                                                                          new_amount=new_amount,
-                                                                                                                         new_category_name=new_category_name,
+                                                                                                                         new_categories_id=new_categories_id,
                                                                                                                          new_receiver_id=new_receiver_id )
                 if recurring_transaction_edited is not None: 
                     message = f'The recurring transaction has been successfully edited.'
@@ -237,11 +233,11 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             elif condition_action == 'sent' and recurring_transaction.status == 'pending':
                 amount = recurring_transaction.amount
                 status = recurring_transaction.status
-                recurring_transaction_sent = await recurring_transactions_service.preview_sent_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                    amount=amount,
-                                                                                                    status=status,
-                                                                                                    condition_action=condition_action,
-                                                                                                    current_user=current_user)
+                recurring_transaction_sent = await recurring_transactions_service.preview_sent_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
+                                                                                                                     amount=amount,
+                                                                                                                     status=status,
+                                                                                                                     condition_action=condition_action,
+                                                                                                                     current_user=current_user)
                 if recurring_transaction_sent is not None: 
                     message = f'The recurring transaction has been successfully sent.'
                 else:
@@ -249,9 +245,9 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
                 recurring_transaction_ready = recurring_transaction_sent
             elif condition_action == 'cancelled' and recurring_transaction.status == 'pending':
                 status = 'declined'
-                recurring_transaction_cancelled = await recurring_transactions_service.preview_cancelled_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                            status=status,
-                                                                                                            condition_action=condition_action)
+                recurring_transaction_cancelled = await recurring_transactions_service.preview_cancelled_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
+                                                                                                                               status=status,
+                                                                                                                               condition_action=condition_action)
                 if recurring_transaction_cancelled is not None: 
                     message = f'The recurring transaction has been cancelled.'
                 else:
@@ -262,11 +258,11 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             amount = recurring_transaction.amount
             status = 'confirmed'
             condition_action = 'sent'
-            recurring_transaction_confirmed = await recurring_transactions_service.preview_confirmed_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                        amount=amount,
-                                                                                                        status=status,
-                                                                                                        condition_action=condition_action,
-                                                                                                        current_user=current_user)
+            recurring_transaction_confirmed = await recurring_transactions_service.preview_confirmed_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
+                                                                                                                           amount=amount,
+                                                                                                                           status=status,
+                                                                                                                           condition_action=condition_action,
+                                                                                                                           current_user=current_user)
             if recurring_transaction_confirmed is not None: 
                 message = f'The recurring transaction has been successfully confirmed.'
             else:
@@ -277,11 +273,11 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             amount = recurring_transaction.amount
             status = 'declined'
             condition_action = 'cancelled'
-            recurring_transaction_declined = await recurring_transactions_service.preview_declined_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                        amount=amount,
-                                                                                                        status=status,
-                                                                                                        condition_action=condition_action,
-                                                                                                        current_user=current_user)
+            recurring_transaction_declined = await recurring_transactions_service.preview_declined_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
+                                                                                                                         amount=amount,
+                                                                                                                         status=status,
+                                                                                                                         condition_action=condition_action,
+                                                                                                                         current_user=current_user)
             if recurring_transaction_declined is not None: 
                 message = f'The recurrign transaction has been declined.'
             else:
@@ -289,10 +285,10 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             recurring_transaction_ready = recurring_transaction_declined
     
         recurring_transaction_view = [RecurringTransactionView.recurring_transaction_view(recurring_transaction=recurring_transaction_ready,
-                                                                                sender=sender,
-                                                                                receiver=receiver,
-                                                                                category_name=category_name,
-                                                                                message=message)]
+                                                                                          sender=sender,
+                                                                                          receiver=receiver,
+                                                                                          category_name=category_name,
+                                                                                          message=message)]
 
         return recurring_transaction_view
     

@@ -42,7 +42,7 @@ class RecurringTransactionView(BaseModel):
             recurring_transaction_date=recurring_transaction.recurring_transaction_date.strftime('%Y/%m/%d %H:%M'),
             next_payment=recurring_transaction.next_payment.strftime('%Y/%m/%d %H:%M'),
             amount=recurring_transaction.amount,
-            category_name=category_name.name,
+            category_name=category_name,
             sender=sender.username,
             receiver=receiver.username,
             direction='outgoing',
