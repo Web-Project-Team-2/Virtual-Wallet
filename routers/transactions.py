@@ -5,7 +5,7 @@ from common.authorization import get_current_user
 from common.responses import BadRequest, NotFound
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, cards_services
+from services import transactions_service, user_services, cards_services, categories_service
 
 
 transactions_router = APIRouter(prefix='/api/transactions')
@@ -51,7 +51,7 @@ async def get_users_transactions(sort: str | None = None,
                                                                          receiver=receiver,
                                                                          direction=direction)
    
-   if users_transaction is not None:
+   if users_transactions != [] or users_transactions != None:
       transactions_view = []
       for users_transaction in users_transactions:
          sender = await user_services.get_user_by_id(user_id=users_transaction.sender_id)
@@ -81,8 +81,6 @@ async def get_users_transactions(sort: str | None = None,
          return transactions_service.sort_transactions(transactions=transactions_view,
                                                       reverse=sort == 'desc',
                                                       attribute=sort_by)
-      elif transactions_view == []:
-         return NotFound(content='Required data not found.')
       else:
          return transactions_view
       
@@ -147,6 +145,10 @@ async def create_transaction_wallet(transaction: Transaction,
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
+
+   if transaction.receiver_id != current_user:
+      return BadRequest(content=f'Please, choose yourself as a receiver. Otherwise you cannot make a transaction to your wallet.')
+
    sender_id = current_user
    receiver_id = current_user
    cards_user_id = current_user
@@ -214,15 +216,16 @@ async def create_transaction_user(transaction: Transaction,
 
    sender = await user_services.get_user_by_id(user_id=sender_id)
    receiver = await user_services.get_user_by_id(user_id=receiver_id)
+
+   if not sender or not receiver:
+      return NotFound(content='Required data not found. Therefore you cannot continue forward.')
+
    contact = await transactions_service.contact_id_exists(current_user=current_user,
                                                           reciever_id=transaction.receiver_id)
    receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
    card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
    card_holder = await cards_services.get_card_info_by_id(card_id=card_id)
    card_number = await cards_services.get_card_info_by_id(card_id=card_id)
-
-   if not sender or not receiver or not card_holder or not card_number:
-      return NotFound(content='Required data not found. Therefore you cannot continue forward.')
    
    user_status = await user_services.get_user_by_status(user_id=current_user)
    if user_status == 'blocked':
@@ -276,21 +279,23 @@ async def create_transaction_category(transaction: Transaction,
       - The ID of the currently authenticated user, automatically injected by Depends(get_current_user).\n
       - This parameter is used to ensure that the request is made by an authenticated user.
    '''
+
    sender_id = current_user
    receiver_id = transaction.receiver_id
    cards_user_id = receiver_id
 
    sender = await user_services.get_user_by_id(user_id=sender_id)
    receiver = await user_services.get_user_by_id(user_id=receiver_id)
+
+   if not sender or not receiver:
+      return NotFound(content='Required data not found. Therefore you cannot continue forward.')
+   
    contact = await transactions_service.contact_id_exists(current_user=current_user,
                                                           reciever_id=transaction.receiver_id)
    receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
    card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
    card_holder = await cards_services.get_card_info_by_id(card_id=card_id)
    card_number = await cards_services.get_card_info_by_id(card_id=card_id)
-
-   if not sender or not receiver or not card_holder or not card_number:
-         return NotFound(content='Required data not found. Therefore you cannot continue forward.')
 
    user_status = await user_services.get_user_by_status(user_id=current_user)
    if user_status == 'blocked':
@@ -385,10 +390,10 @@ async def preview_transaction(transaction_id: int,
             amount = transaction.amount
             status = 'confirmed'
             transaction_sent = await transactions_service.preview_sent_transaction(transaction_id=transaction_id,
-                                                                                    amount=amount,
-                                                                                    status=status,
-                                                                                    condition_action=condition_action,
-                                                                                    current_user=current_user)
+                                                                                   amount=amount,
+                                                                                   status=status,
+                                                                                   condition_action=condition_action,
+                                                                                   current_user=current_user)
             if transaction_sent is not None: 
                message = f'The transaction has been successfully sent.'
             else:

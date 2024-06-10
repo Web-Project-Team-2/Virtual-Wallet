@@ -40,10 +40,11 @@ async def view_all_recurring_transactions(current_user: int,
     if recurring_transaction_date or categories_id:
         filter_by = []
         if recurring_transaction_date:
-            recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
-            if not recurring_transaction_date:
+            try:
+                recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
+            except ValueError:
                 return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
-            filter_by.append(f'recurring_transaction_date = ${len(sql_parameters) + 1}')
+            filter_by.append(f'DATE(recurring_transaction_date) = ${len(sql_parameters) + 1}')
             sql_parameters.append(recurring_transaction_date)
         if categories_id:
             filter_by.append(f'categories_id = ${len(sql_parameters) + 1}')
@@ -56,7 +57,7 @@ async def view_all_recurring_transactions(current_user: int,
         rows = await read_query(sql=loc_sql_recurring_transactions,
                                 sql_params=sql_parameters)
     
-        if rows is not None:
+        if rows != []:
             return [RecurringTransaction.from_query_result(*row) for row in rows]
         else:
             return None
@@ -154,9 +155,10 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
 
 
 async def preview_edited_recurring_transaction(recurring_transaction_id: int,
-                                               new_amount: float,
-                                               new_category_name: str,
-                                               new_receiver_id: int):
+                                               new_next_payment: str | None = None,
+                                               new_amount: float | None = None,
+                                               new_categories_id: int | None = None,
+                                               new_receiver_id: int | None = None):
     '''
     This function previews a recurring transaction if it will be edited.\n
     Parameters:\n
@@ -179,14 +181,17 @@ async def preview_edited_recurring_transaction(recurring_transaction_id: int,
 
     if recurring_transaction is None:
         return None 
-
-    if new_amount:
+    
+    if new_next_payment is not None:
+        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET next_payment = $1 WHERE id = $2',
+                                                          sql_params=(new_next_payment, recurring_transaction_id))
+    if new_amount is not None:
         edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET amount = $1 WHERE id = $2',
                                                           sql_params=(new_amount, recurring_transaction_id))
-    if new_category_name:
-        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET category_name = $1 WHERE id = $2',
-                                                          sql_params=(new_category_name, recurring_transaction_id))
-    if new_receiver_id:
+    if new_categories_id is not None:
+        edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET categories_id = $1 WHERE id = $2',
+                                                          sql_params=(new_categories_id, recurring_transaction_id))
+    if new_receiver_id is not None:
         edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET receiver_id = $1 WHERE id = $2',
                                                           sql_params=(new_receiver_id, recurring_transaction_id))
           
@@ -228,14 +233,10 @@ async def preview_sent_recurring_transaction(recurring_transaction_id: int,
 
     sender_id = recurring_transaction.sender_id
     receiver_id = recurring_transaction.receiver_id
-    cards_id = recurring_transaction.cards_id
 
     sent_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET status = $1, condition = $2 WHERE id = $3',
                                                     sql_params=(status, condition_action, recurring_transaction_id))
      
-    if current_user == sender_id and current_user == receiver_id:
-        updated_card_balance = await update_query(sql='UPDATE cards SET balance = balance - $1 WHERE id = $2',
-                                                  sql_params=(amount, cards_id))
     if current_user == sender_id and current_user != receiver_id:
         updated_user_balance = await update_query(sql='UPDATE users SET balance = balance - $1 WHERE id = $2',
                                                   sql_params=(amount, sender_id))
