@@ -390,10 +390,10 @@ async def preview_transaction(transaction_id: int,
             amount = transaction.amount
             status = 'confirmed'
             transaction_sent = await transactions_service.preview_sent_transaction(transaction_id=transaction_id,
-                                                                                    amount=amount,
-                                                                                    status=status,
-                                                                                    condition_action=condition_action,
-                                                                                    current_user=current_user)
+                                                                                   amount=amount,
+                                                                                   status=status,
+                                                                                   condition_action=condition_action,
+                                                                                   current_user=current_user)
             if transaction_sent is not None: 
                message = f'The transaction has been successfully sent.'
             else:
