@@ -1,17 +1,18 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class Transaction(BaseModel):
-    id: int | None = None
-    status: str = 'pending'
-    condition: str = 'edited'
-    transaction_date: datetime | None = None
+    id: Optional[int] = None
+    status: Optional[str] = 'pending'
+    condition: Optional[str] = 'edited'
+    transaction_date: Optional[datetime] = None
     amount: float
-    category_name: str = 'no category'
-    sender_id: int | None = None
+    category_name: Optional[str] = 'no category'
+    sender_id: Optional[int] = None
     receiver_id: int
-    cards_id: int | None = None
+    cards_id: Optional[int] = None
 
     @classmethod
     def from_query_result(cls, id, status, condition, transaction_date, amount, 

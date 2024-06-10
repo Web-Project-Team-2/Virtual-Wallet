@@ -1,8 +1,8 @@
 from data.models.transactions import Transaction
-from data.models.user import User
-from data.models.cards import Card
-from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
+from common.responses import BadRequest
+from services import cards_services
+from datetime import datetime
 
 sql_transactions = '''SELECT id, status, condition, transaction_date, amount, category_name, sender_id, receiver_id, cards_id
                       FROM transactions'''
@@ -44,37 +44,42 @@ async def view_all_transactions(current_user: int,
           - Filter transactions by direction ('incoming' or 'outgoing').\n
      '''
 
-     sql_query = sql_transactions 
+     sql_parameters = []
+     loc_sql_transactions = sql_transactions
 
      if transaction_date or sender or receiver or direction:
           filter_by = []
-          sql_parameters = []
           if transaction_date:
-               filter_by.append(f'transaction_date = %s')
+               transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
+               if not transaction_date:
+                    return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
+               filter_by.append(f'transaction_date = ${len(sql_parameters) + 1}')
                sql_parameters.append(transaction_date)
           if sender:
-               filter_by.append(f'sender_id = %s')
+               filter_by.append(f'sender_id = ${len(sql_parameters) + 1}')
                sql_parameters.append(sender)
           if receiver:
-               filter_by.append(f'receiver_id = %s')
+               filter_by.append(f'receiver_id = ${len(sql_parameters) + 1}')
                sql_parameters.append(receiver)
           if direction:
                if direction == 'outgoing' and current_user == receiver:
-                    filter_by.append(f'sender_id = %s')
+                    filter_by.append(f'sender_id = ${len(sql_parameters) + 1}')
                     sql_parameters.append(current_user)
                elif direction == 'incoming':
-                    filter_by.append(f'receiver_id = %s')
+                    filter_by.append(f'receiver_id = ${len(sql_parameters) + 1}')
                     sql_parameters.append(current_user)
 
           if filter_by:
-               sql_query += ' WHERE ' + ' AND '.join(filter_by)
-          
-          rows = await read_query(sql=sql_query,
-                                  sql_params=tuple(iterable=sql_parameters))
+               loc_sql_transactions += ' WHERE ' + ' AND '.join(filter_by)
+
+          sql_parameters = tuple(sql_parameters)
+          rows = await read_query(sql=loc_sql_transactions, sql_params=sql_parameters)
+
           if rows is not None:
                return [Transaction.from_query_result(*row) for row in rows]
           else:
-               return []
+               return None
+
      else:
           transactions_incoming = await read_query(sql=receiver_id_transactions,
                                                    sql_params=(current_user,))
@@ -88,7 +93,10 @@ async def view_all_transactions(current_user: int,
                if transaction not in transactions_all:
                     transactions_all.append(transaction)
 
-          return transactions_all
+          if transactions_all != []:
+               return transactions_all
+          else:
+               return None
 
 
 def sort_transactions(transactions: list[Transaction], *,
@@ -110,7 +118,7 @@ def sort_transactions(transactions: list[Transaction], *,
      elif attribute == 'amount':
           def sort_fn(t: Transaction): return t.amount
      else:
-        raise ValueError(f'Unsupported sort attribute: {attribute}.')
+        return BadRequest(content=f'Unsupported sort attribute: {attribute}.')
 
      return sorted(transactions, key=sort_fn, reverse=reverse)
 
@@ -160,7 +168,7 @@ async def create_transaction_to_users_wallet(transaction: Transaction,
      receiver_id = current_user
      cards_user_id = current_user
 
-     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
      
      generated_id = await insert_query(sql=values_transactions,
                                        sql_params=(transaction.status, 
@@ -174,7 +182,10 @@ async def create_transaction_to_users_wallet(transaction: Transaction,
 
      transaction.id = generated_id
 
-     return transaction
+     if transaction is not None:
+          return transaction
+     else:
+          return None
 
 
 async def create_transaction_to_users_balance(transaction: Transaction,
@@ -193,7 +204,7 @@ async def create_transaction_to_users_balance(transaction: Transaction,
      receiver_id = transaction.receiver_id
      cards_user_id = current_user
 
-     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
 
      generated_id = await insert_query(sql=values_transactions,
                                        sql_params=(transaction.status,
@@ -207,7 +218,10 @@ async def create_transaction_to_users_balance(transaction: Transaction,
 
      transaction.id = generated_id
 
-     return transaction
+     if transaction is not None:
+          return transaction
+     else:
+          return None
 
 
 async def create_transaction_to_users_category(transaction: Transaction,
@@ -226,7 +240,7 @@ async def create_transaction_to_users_category(transaction: Transaction,
      receiver_id = transaction.receiver_id
      cards_user_id = current_user
 
-     card_id = await get_card_by_user_id(cards_user_id=cards_user_id)
+     card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
 
      generated_id = await insert_query(sql=values_transactions,
                                        sql_params=(transaction.status, 
@@ -240,7 +254,10 @@ async def create_transaction_to_users_category(transaction: Transaction,
 
      transaction.id = generated_id
 
-     return transaction
+     if transaction is not None:
+          return transaction
+     else:
+          return None
 
 
 async def preview_edited_transaction(transaction_id: int,
@@ -266,7 +283,7 @@ async def preview_edited_transaction(transaction_id: int,
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
      if transaction is None:
-        return None 
+        return None
 
      if new_amount:
           edited_transaction = await update_query(sql='UPDATE transactions SET amount = $1 WHERE id = $2',
@@ -476,20 +493,6 @@ async def transaction_id_exists(transaction_id: int) -> bool:
                                           sql_params=(transaction_id,)))
 
 
-async def user_id_exists(user_id: int) -> bool:
-    '''
-    This function checks if a user with the specified ID exists in the database.\n
-    Parameters:\n
-    - user_id: int\n
-        - The ID of the user to check for existence.\n
-    '''
-
-    return any(await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
-                                                FROM users 
-                                                WHERE id = $1''',
-                                         sql_params=(user_id,)))
-
-
 async def contact_id_exists(current_user: int,
                             reciever_id: int) -> bool:
     '''
@@ -505,91 +508,3 @@ async def contact_id_exists(current_user: int,
                                                 FROM contacts 
                                                 WHERE users_id = $1 AND contact_user_id = $2''',
                                         sql_params=(current_user, reciever_id,)))
-
-
-async def get_user_by_id(user_id: int) -> User:
-    '''
-    This function retrieves user information by user ID.\n
-    Parameters:\n
-    - user_id : int\n
-        - The ID of the user to retrieve.
-    '''
-    user_data = await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
-                                        FROM users
-                                        WHERE id = $1''',
-                                sql_params=(user_id,))
-    
-    user = next((User.from_query_result(*row) for row in user_data), None)
-
-    return user
-
-
-async def get_user_by_status(user_id: int) -> str:
-    '''
-    This function retrieves the status of a user from the database based on their user ID.\n
-    Parameters:\n
-    - user_id : int\n
-        - The ID of the user whose status is being retrieved.
-    '''
-     
-    user_status = await read_query(sql='''SELECT status
-                                          FROM users
-                                          WHERE id = $1''',
-                                   sql_params=(user_id,))
-    
-    user_status = next((row[0] for row in user_status), None)
-
-    return user_status
-
-
-async def get_category_by_id(category_id: int) -> Category:
-    '''
-    This function retrieves a category from the database based on its ID.\n
-    Parameters:\n
-    - category_id : int\n
-        - The ID of the category to retrieve.\n
-    '''
-
-    category_data = await read_query(sql='SELECT id, name FROM categories WHERE id = $1',
-                                     sql_params=(category_id,))
-
-    category = next((Category.from_query_result(*row) for row in category_data), None)
-
-    return category
-
-
-async def get_card_by_id(card_id: int) -> Card:
-    '''
-    This function retrieves a card from the database based on its ID.\n
-    Parameters:\n
-    - card_id : int\n
-        - The ID of the card to retrieve.
-    '''
-    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                                        FROM cards
-                                        WHERE id = $1''',
-                                 sql_params=(card_id,))
-    
-    card = next((Card.from_query_result(*row) for row in card_data), None)
-
-    return card
-
-
-async def get_card_by_user_id(cards_user_id: int) -> int:
-    '''
-    This function retrieves a card ID from the database based on the user's ID.\n
-    Parameters:\n
-    - cards_user_id : int\n
-        - The ID of the user whose card ID is being retrieved.
-    '''
-
-    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                                        FROM cards
-                                        WHERE user_id = $1''',
-                           sql_params=(cards_user_id,))
-    
-    card = next((Card.from_query_result(*row) for row in card_data), None)
-
-    card_id = card.id
-
-    return card_id

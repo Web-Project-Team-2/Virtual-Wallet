@@ -3,7 +3,7 @@ from common.responses import NotFound, BadRequest
 from common.authorization import get_current_user
 from data.models.recurring_transactions import RecurringTransaction
 from schemas.recurring_transactions import RecurringTransactionViewAll, RecurringTransactionView
-from services import recurring_transactions_service
+from services import recurring_transactions_service, user_services, categories_service
 from datetime import datetime, timedelta
 from typing import List
 
@@ -46,9 +46,9 @@ async def get_users_recurring_transactions(sort: str | None = None,
 
     recurring_transactions_view = []
     for users_recurring_transaction in users_recurring_transactions:
-        sender = await recurring_transactions_service.get_user_by_id(user_id=users_recurring_transaction.sender_id)
-        receiver = await recurring_transactions_service.get_user_by_id(user_id=users_recurring_transaction.receiver_id)
-        category_name = await recurring_transactions_service.get_category_by_id(category_id=users_recurring_transaction.categories_id)
+        sender = await user_services.get_user_by_id(user_id=users_recurring_transaction.sender_id)
+        receiver = await user_services.get_user_by_id(user_id=users_recurring_transaction.receiver_id)
+        category_name = await categories_service.get_category_by_id(category_id=users_recurring_transaction.categories_id)
         if not sender or not receiver or not category_name:
             return NotFound(content='Required data not found.')
         recurring_transactions_view.append(RecurringTransactionViewAll.recurring_transactions_view(recurring_transaction=users_recurring_transaction,
@@ -85,9 +85,9 @@ async def get_transactions_by_id(recurring_transaction_id: int,
     if await recurring_transactions_service.recurring_transaction_id_exists(recurring_transaction_id=recurring_transaction_id):
         recurring_transaction_view = await recurring_transactions_service.view_recurring_transaction_by_id(recurring_transaction_id=recurring_transaction_id,
                                                                                                            current_user=current_user)
-        sender = await recurring_transactions_service.get_user_by_id(user_id=recurring_transaction_view.sender_id)
-        receiver = await recurring_transactions_service.get_user_by_id(user_id=recurring_transaction_view.receiver_id)
-        category_name = await recurring_transactions_service.get_category_by_id(category_id=recurring_transaction_view.categories_id)
+        sender = await user_services.get_user_by_id(user_id=recurring_transaction_view.sender_id)
+        receiver = await user_services.get_user_by_id(user_id=recurring_transaction_view.receiver_id)
+        category_name = await categories_service.get_category_by_id(category_id=recurring_transaction_view.categories_id)
         
         if not sender or not receiver or not category_name:
             return NotFound(content='Required data not found.')
@@ -117,7 +117,7 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
         - This parameter is used to ensure that the request is made by an authenticated user.
     '''
     
-    user_status = await recurring_transactions_service.get_user_by_status(user_id=current_user)
+    user_status = await user_services.get_user_by_status(user_id=current_user)
     if user_status == 'blocked':
         return BadRequest(content=f'You have been blocked. Therefore the current option is not available for you.')
 
@@ -131,12 +131,12 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
     categories_id = recurring_transaction.categories_id
 
     recurring_transaction_create = await recurring_transactions_service.create_recurring_transaction(recurring_transaction=recurring_transaction)
-    sender = await recurring_transactions_service.get_user_by_id(user_id=sender_id)
-    receiver = await recurring_transactions_service.get_user_by_id(user_id=receiver_id)
+    sender = await user_services.get_user_by_id(user_id=sender_id)
+    receiver = await user_services.get_user_by_id(user_id=receiver_id)
     contact = await recurring_transactions_service.contact_id_exists(current_user=current_user,
                                                     reciever_id=recurring_transaction.receiver_id)
-    category_name = await recurring_transactions_service.get_category_by_id(category_id=categories_id)
-    receiver_status = await recurring_transactions_service.get_user_by_status(user_id=receiver.id)
+    category_name = await categories_service.get_category_by_id(category_id=categories_id)
+    receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
 
     if contact == True and receiver_status != 'pending' and receiver_status != 'blocked':
         recurring_transaction_create = await recurring_transactions_service.create_recurring_transaction(recurring_transaction=recurring_transaction)
@@ -171,8 +171,8 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
     '''
     
     if await recurring_transactions_service.recurring_transaction_id_exists(recurring_transaction_id=recurring_transaction_id):
-        sender = await recurring_transactions_service.get_user_by_id(user_id=recurring_transaction.sender_id)
-        receiver = await recurring_transactions_service.get_user_by_id(user_id=recurring_transaction.receiver_id)
+        sender = await user_services.get_user_by_id(user_id=recurring_transaction.sender_id)
+        receiver = await user_services.get_user_by_id(user_id=recurring_transaction.receiver_id)
         condition_action = recurring_transaction.condition
     
         if current_user == sender.id and current_user == receiver.id:
@@ -188,7 +188,7 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
             elif condition_action == 'sent' and recurring_transaction.status == 'pending':
                 amount = recurring_transaction.amount
                 status = 'confirmed'
-                transaction_sent = await recurring_transactions_service.preview_send_recurring_transaction(transaction_id=recurring_transaction_id,
+                transaction_sent = await recurring_transactions_service.preview_sent_recurring_transaction(transaction_id=recurring_transaction_id,
                                                                                                     amount=amount,
                                                                                                     status=status,
                                                                                                     condition_action=condition_action,

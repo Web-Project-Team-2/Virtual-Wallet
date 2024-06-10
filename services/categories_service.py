@@ -49,3 +49,18 @@ async def name_exists(name: str):
     data = await read_query(sql, params)
     return data[0][0] > 0
 
+
+async def get_category_by_id(category_id: int) -> Category:
+    '''
+    This function retrieves a category from the database based on its ID.\n
+    Parameters:\n
+    - category_id : int\n
+        - The ID of the category to retrieve.\n
+    '''
+
+    category_data = await read_query(sql='SELECT id, name FROM categories WHERE id = $1',
+                                     sql_params=(category_id,))
+
+    category = next((Category.from_query_result(*row) for row in category_data), None)
+
+    return category
