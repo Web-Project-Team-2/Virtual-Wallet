@@ -195,4 +195,53 @@ async def withdraw_money(user_id: int, withdraw: int):
         return f"You have successfully withdrawn ${withdraw} from your virtual wallet."
     else:
         return f"Unable to withdraw ${withdraw} into your account."
+    
+
+async def user_id_exists(user_id: int) -> bool:
+    '''
+    This function checks if a user with the specified ID exists in the database.\n
+    Parameters:\n
+    - user_id: int\n
+        - The ID of the user to check for existence.\n
+    '''
+
+    return any(await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
+                                                FROM users 
+                                                WHERE id = $1''',
+                                         sql_params=(user_id,)))
+
+
+async def get_user_by_id(user_id: int) -> User:
+    '''
+    This function retrieves user information by user ID.\n
+    Parameters:\n
+    - user_id : int\n
+        - The ID of the user to retrieve.
+    '''
+    user_data = await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
+                                        FROM users
+                                        WHERE id = $1''',
+                                sql_params=(user_id,))
+    
+    user = next((User.from_query_result(*row) for row in user_data), None)
+
+    return user
+
+
+async def get_user_by_status(user_id: int) -> str:
+    '''
+    This function retrieves the status of a user from the database based on their user ID.\n
+    Parameters:\n
+    - user_id : int\n
+        - The ID of the user whose status is being retrieved.
+    '''
+     
+    user_status = await read_query(sql='''SELECT status
+                                          FROM users
+                                          WHERE id = $1''',
+                                   sql_params=(user_id,))
+    
+    user_status = next((row[0] for row in user_status), None)
+
+    return user_status
 

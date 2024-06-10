@@ -1,8 +1,7 @@
 from data.models.recurring_transactions import RecurringTransaction
-from data.models.user import User
-from data.models.cards import Card
-from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
+from common.responses import BadRequest
+from datetime import datetime
 
 
 sql_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payment, status, condition, amount, sender_id, receiver_id, categories_id
@@ -17,8 +16,7 @@ id_recurring_transactions = '''SELECT id, recurring_transaction_date, next_payme
                                       WHERE id = $1'''
 
 values_recurring_transactions = '''INSERT INTO recurring_transactions (recurring_transaction_date, next_payment, status, condition, amount, sender_id, receiver_id, categories_id) 
-                                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                                   RETURNING id'''
+                                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)'''
 
 
 async def view_all_recurring_transactions(current_user: int,
@@ -36,24 +34,32 @@ async def view_all_recurring_transactions(current_user: int,
         Filter recurring transactions by category ID.
     '''
 
-    sql_query = sql_recurring_transactions
+    sql_parameters = []
+    loc_sql_recurring_transactions = sql_recurring_transactions
 
     if recurring_transaction_date or categories_id:
         filter_by = []
-        sql_parameters = []
         if recurring_transaction_date:
-            filter_by.append(f'recurring_transaction_date = $1')
+            recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
+            if not recurring_transaction_date:
+                return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
+            filter_by.append(f'recurring_transaction_date = ${len(sql_parameters) + 1}')
             sql_parameters.append(recurring_transaction_date)
         if categories_id:
-            filter_by.append(f'categories_id = %2')
+            filter_by.append(f'categories_id = ${len(sql_parameters) + 1}')
             sql_parameters.append(categories_id)
 
         if filter_by:
-            sql_query += ' WHERE ' + ' AND '.join(filter_by)
+            loc_sql_recurring_transactions += ' WHERE ' + ' AND '.join(filter_by)
 
-        rows = await read_query(sql=sql_query,
-                                sql_params=tuple(iterable=sql_parameters))
-        return [RecurringTransaction.from_query_result(*row) for row in rows]
+        sql_parameters = tuple(sql_parameters)
+        rows = await read_query(sql=loc_sql_recurring_transactions,
+                                sql_params=sql_parameters)
+    
+        if rows is not None:
+            return [RecurringTransaction.from_query_result(*row) for row in rows]
+        else:
+            return None
      
     else:
         recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
@@ -65,7 +71,10 @@ async def view_all_recurring_transactions(current_user: int,
             if recurring_transaction not in recurring_transactions_all:
                 recurring_transactions_all.append(recurring_transaction)
 
-        return recurring_transactions_all
+        if recurring_transactions_all != []:
+            return recurring_transactions_all
+        else:
+            return None
 
 
 def sort_recurring_transactions(recurring_transactions: list[RecurringTransaction], *,
@@ -87,7 +96,7 @@ def sort_recurring_transactions(recurring_transactions: list[RecurringTransactio
     elif attribute == 'amount':
         def sort_fn(t: RecurringTransaction): return t.amount
     else:
-        raise ValueError(f'Unsupported sort attribute: {attribute}.')
+        return BadRequest(content=f'Unsupported sort attribute: {attribute}.')
      
     return sorted(recurring_transactions, key=sort_fn, reverse=reverse)
 
@@ -107,11 +116,11 @@ async def view_recurring_transaction_by_id(recurring_transaction_id: int,
     recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
                                               sql_params=(current_user,))
 
-    if not recurring_transactions:
+    if recurring_transactions:
+        recurring_transaction_by_id = await read_query(sql=id_recurring_transactions,
+                                                       sql_params=(recurring_transaction_id,))
+    else:
         return None
-    
-    recurring_transaction_by_id = await read_query(sql=id_recurring_transactions,
-                                                   sql_params=(recurring_transaction_id,))
      
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transaction_by_id), None)
 
@@ -138,7 +147,10 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
 
     recurring_transaction.id = generated_id
 
-    return recurring_transaction
+    if recurring_transaction is not None:
+        return recurring_transaction
+    else:
+        return None
 
 
 async def preview_edited_recurring_transaction(recurring_transaction_id: int,
@@ -239,11 +251,11 @@ async def preview_sent_recurring_transaction(recurring_transaction_id: int,
     return sent_recurring_transaction
 
 
-async def preview_confirm_recurring_transaction(recurring_transaction_id: int,
-                                                amount: float,
-                                                status: str,
-                                                condition_action: str,
-                                                current_user: int):
+async def preview_confirmed_recurring_transaction(recurring_transaction_id: int,
+                                                  amount: float,
+                                                  status: str,
+                                                  condition_action: str,
+                                                  current_user: int):
     '''
     This function previews a recurring transaction if it will be confirmed.\n
     Parameters:\n
@@ -285,9 +297,9 @@ async def preview_confirm_recurring_transaction(recurring_transaction_id: int,
     return confirmed_recurring_transaction
 
 
-async def preview_cancel_recurring_transaction(recurring_transaction_id: int,
-                                               status: str,
-                                               condition_action: str):
+async def preview_cancelled_recurring_transaction(recurring_transaction_id: int,
+                                                  status: str,
+                                                  condition_action: str):
     '''
     This function previews a recurring transaction if it will be cancelled.\n
     Parameters:\n
@@ -318,11 +330,11 @@ async def preview_cancel_recurring_transaction(recurring_transaction_id: int,
     return cancelled_recurring_transaction
 
 
-async def preview_decline_recurring_transaction(recurring_transaction_id: int,
-                                                amount: float,
-                                                status: str,
-                                                condition_action: str,
-                                                current_user: int):
+async def preview_declined_recurring_transaction(recurring_transaction_id: int,
+                                                 amount: float,
+                                                 status: str,
+                                                 condition_action: str,
+                                                 current_user: int):
     '''
     This function previews a recurring transaction if it will be declined.\n
     Parameters:\n
@@ -377,20 +389,6 @@ async def recurring_transaction_id_exists(recurring_transaction_id: int) -> bool
                                          sql_params=(recurring_transaction_id,)))
 
 
-async def user_id_exists(user_id: int) -> bool:
-    '''
-    This function checks if a user with the specified ID exists in the database.\n
-    Parameters:\n
-    - user_id: int\n
-        - The ID of the user to check for existence.\n
-    '''
-
-    return any(await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance 
-                                                FROM users 
-                                                WHERE id = $1''',
-                                         sql_params=(user_id,)))
-
-
 async def contact_id_exists(current_user: int,
                             reciever_id: int) -> bool:
     '''
@@ -406,91 +404,3 @@ async def contact_id_exists(current_user: int,
                                                 FROM contacts 
                                                 WHERE users_id = $1 AND contact_user_id = $2''',
                                         sql_params=(current_user, reciever_id,)))
-
-
-async def get_user_by_id(user_id: int) -> User:
-    '''
-    This function retrieves user information by user ID.\n
-    Parameters:\n
-    - user_id : int\n
-        - The ID of the user to retrieve.
-    '''
-    user_data = await read_query(sql='''SELECT id, email, username, password, phone_number, is_admin, create_at, status, balance
-                                        FROM users
-                                        WHERE id = $1''',
-                                sql_params=(user_id,))
-    
-    user = next((User.from_query_result(*row) for row in user_data), None)
-
-    return user
-
-
-async def get_user_by_status(user_id: int) -> str:
-    '''
-    This function retrieves the status of a user from the database based on their user ID.\n
-    Parameters:\n
-    - user_id : int\n
-        - The ID of the user whose status is being retrieved.
-    '''
-     
-    user_status = await read_query(sql='''SELECT status
-                                          FROM users
-                                          WHERE id = $1''',
-                                   sql_params=(user_id,))
-    
-    user_status = next((row[0] for row in user_status), None)
-
-    return user_status
-
-
-async def get_category_by_id(category_id: int) -> Category:
-    '''
-    This function retrieves a category from the database based on its ID.\n
-    Parameters:\n
-    - category_id : int\n
-        - The ID of the category to retrieve.\n
-    '''
-
-    category_data = await read_query(sql='SELECT id, name FROM categories WHERE id = $1',
-                                     sql_params=(category_id,))
-
-    category = next((Category.from_query_result(*row) for row in category_data), None)
-
-    return category
-
-
-async def get_card_by_id(card_id: int) -> Card:
-    '''
-    This function retrieves a card from the database based on its ID.\n
-    Parameters:\n
-    - card_id : int\n
-        - The ID of the card to retrieve.
-    '''
-    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                                        FROM cards
-                                        WHERE id = $1''',
-                                 sql_params=(card_id,))
-    
-    card = next((Card.from_query_result(*row) for row in card_data), None)
-
-    return card
-
-
-async def get_card_by_user_id(cards_user_id: int) -> int:
-    '''
-    This function retrieves a card ID from the database based on the user's ID.\n
-    Parameters:\n
-    - cards_user_id : int\n
-        - The ID of the user whose card ID is being retrieved.
-    '''
-
-    card_data = await read_query(sql='''SELECT id, card_number, cvv, card_holder, expiration_date, card_status, user_id, balance
-                                        FROM cards
-                                        WHERE user_id = $1''',
-                           sql_params=(cards_user_id,))
-    
-    card = next((Card.from_query_result(*row) for row in card_data), None)
-
-    card_id = card.id
-
-    return card_id

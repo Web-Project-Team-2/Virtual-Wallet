@@ -31,9 +31,10 @@ class RecurringTransactionView(BaseModel):
     sender: str 
     receiver: str
     direction: str = 'outgoing'
+    message: str
 
     @classmethod
-    def recurring_transaction_view(cls, recurring_transaction, sender, receiver, category_name):
+    def recurring_transaction_view(cls, recurring_transaction, sender, receiver, category_name, message):
        
         return cls(
             status=recurring_transaction.status,
@@ -44,5 +45,6 @@ class RecurringTransactionView(BaseModel):
             category_name=category_name.name,
             sender=sender.username,
             receiver=receiver.username,
-            direction='outgoing'
+            direction='outgoing',
+            message=message
         )

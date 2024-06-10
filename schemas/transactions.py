@@ -30,9 +30,10 @@ class TransactionView(BaseModel):
     sender: str 
     receiver: str
     direction: str
-
+    message: str
+  
     @classmethod
-    def transaction_view(cls, transaction, sender, receiver, direction):
+    def transaction_view(cls, transaction, sender, receiver, direction, message):
        
         return cls(
             status=transaction.status,
@@ -42,7 +43,8 @@ class TransactionView(BaseModel):
             category_name=transaction.category_name,
             sender=sender.username,
             receiver=receiver.username,
-            direction=direction
+            direction=direction,
+            message=message
         )
 
 

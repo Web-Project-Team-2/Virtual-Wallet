@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from datetime import datetime
-
+from typing import Optional
 
 class RecurringTransaction(BaseModel):
-    id: int | None = None
-    recurring_transaction_date: datetime | None = None
-    next_payment: datetime | None = None
-    status: str = 'pending' 
-    condition: str = 'edited'
+    id: Optional[int] = None
+    recurring_transaction_date: Optional[datetime] = None
+    next_payment: Optional[datetime] = None
+    status: Optional[str] = 'pending'
+    condition: Optional[str] = 'edited'
     amount: float
-    sender_id: int | None = None
+    sender_id: Optional[int] = None
     receiver_id: int
-    categories_id: int | None = None
+    categories_id: Optional[int] = None
 
     @classmethod
     def from_query_result(cls, id, recurring_transaction_date, next_payment, status,
