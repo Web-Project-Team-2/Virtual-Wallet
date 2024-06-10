@@ -2,6 +2,8 @@ from datetime import datetime
 
 from fastapi import HTTPException, status
 
+from data.database_queries import read_query
+
 
 def convert_to_datetime(expiry_str: str) -> datetime:
     try:
@@ -26,3 +28,13 @@ def check_password(password):
                                 detail='Password must contain at least one special symbol.')
 
         return password
+
+
+async def get_card_id_by_card_number(card_number: str, user_id: int):
+    # Fetch the card id using card number and user id
+    card_data = await read_query('SELECT id FROM cards WHERE card_number = $1 AND user_id = $2', (card_number, user_id))
+    if card_data:
+        return card_data[0]['id']
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
+

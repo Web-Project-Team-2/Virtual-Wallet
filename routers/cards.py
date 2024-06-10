@@ -13,7 +13,6 @@ async def create_card(card_details: CardCreate, current_user: int = Depends(auth
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to create card: {e}")
 
-
 @cards_router.delete('/{card_id}', tags=["Cards"], status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(card_id: int, current_user: int = Depends(authorization.get_current_user)):
     try:
@@ -24,3 +23,4 @@ async def delete_card(card_id: int, current_user: int = Depends(authorization.ge
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to delete card: {e}")
+

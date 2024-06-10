@@ -13,11 +13,6 @@
         <div class="alert alert-success" role="alert">
             {{ message }}
         </div>
-        <script>
-            setTimeout(function() {
-                window.location.href = "/login";
-            }, 3000); // Redirect after 3 seconds
-        </script>
         {% endif %}
         <form action="/register" method="post">
             <div class="form-group">

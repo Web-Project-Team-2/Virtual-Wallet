@@ -57,7 +57,7 @@
             margin-bottom: 20px;
             background-color: #f8f9fa;
         }
-        .card-header {
+        .card-header, .profile-card .card-header, .cards-card .card-header, .transactions-card .card-header {
             background-color: #007bff;
             color: #fff;
             padding: 10px;
@@ -77,167 +77,282 @@
             right: 20px;
         }
     </style>
+
 </head>
 <body>
-    <div class="profile-container">
-        <div class="logout-button">
-            <a class="btn btn-primary" href="/logout">Logout</a>
+<div class="profile-container">
+    <div class="logout-button">
+        <a class="btn btn-primary" href="/logout">Logout</a>
+    </div>
+    <div class="profile-header">
+        <h1>User Profile</h1>
+    </div>
+    <div class="tab-buttons">
+        <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab"
+                   aria-controls="profile" aria-selected="true">Profile</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="cards-tab" data-toggle="tab" href="#cards" role="tab" aria-controls="cards"
+                   aria-selected="false">View Cards</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="deposit-tab" data-toggle="tab" href="#deposit" role="tab"
+                   aria-controls="deposit" aria-selected="false">Deposit</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="withdraw-tab" data-toggle="tab" href="#withdraw" role="tab"
+                   aria-controls="withdraw" aria-selected="false">Withdraw</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="create-card-tab" data-toggle="tab" href="#create-card" role="tab"
+                   aria-controls="create-card" aria-selected="false">Create Card</a>
+            </li>
+        </ul>
+        <div class="edit-button">
+            <a href="/edit-profile">Edit Profile</a>
         </div>
-        <div class="profile-header">
-            <h1>User Profile</h1>
-        </div>
-        <div class="tab-buttons">
-            <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="true">Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="cards-tab" data-toggle="tab" href="#cards" role="tab" aria-controls="cards" aria-selected="false">View Cards</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="deposit-tab" data-toggle="tab" href="#deposit" role="tab" aria-controls="deposit" aria-selected="false">Deposit</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="withdraw-tab" data-toggle="tab" href="#withdraw" role="tab" aria-controls="withdraw" aria-selected="false">Withdraw</a>
-                </li>
-            </ul>
-            <div class="edit-button">
-                <a href="/edit-profile">Edit Profile</a>
+    </div>
+    <div class="tab-content" id="profileTabsContent">
+        <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+            <div class="profile-card">
+                <div class="card-header">
+                    <h2>Profile Details</h2>
+                </div>
+                <div class="card-body">
+                    <div class="profile-info">
+                        <label>Username:</label>
+                        <span>{{ user.username }}</span>
+                    </div>
+                    <div class="profile-info">
+                        <label>Email:</label>
+                        <span>{{ user.email }}</span>
+                    </div>
+                    <div class="profile-info">
+                        <label>Balance:</label>
+                        <span>${{ user.balance }}</span>
+                    </div>
+                    <div class="profile-info">
+                        <label>Phone Number:</label>
+                        <span>{{ user.phone_number }}</span>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="tab-content" id="profileTabsContent">
-            <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
-                <div class="profile-card">
-                    <div class="card-header">
-                        <h2>Profile Details</h2>
+        <div class="tab-pane fade" id="cards" role="tabpanel" aria-labelledby="cards-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="cards-card">
+                        <div class="card-header">
+                            <h2>Cards</h2>
+                        </div>
+                        <div class="card-body">
+                            {% if card_info.cards %}
+                            {% for card in card_info.cards %}
+                            <div class="cards-info">
+                                <label>Card Number:</label>
+                                <span>{{ card.card_number }}</span>
+                            </div>
+                            <div class="cards-info">
+                                <label>Balance:</label>
+                                <span>${{ card.balance }}</span>
+                            </div>
+                            <div class="cards-info">
+                                <label>Card Holder:</label>
+                                <span>{{ card.card_holder }}</span>
+                            </div>
+                            <hr>
+                            {% endfor %}
+                            {% else %}
+                            <p>No cards found.</p>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="profile-info">
-                            <label>Username:</label>
-                            <span>{{ user.username }}</span>
+                </div>
+                <div class="col-md-6">
+                    <div class="transactions-card">
+                        <div class="card-header">
+                            <h2>Transactions</h2>
                         </div>
-                        <div class="profile-info">
-                            <label>Email:</label>
-                            <span>{{ user.email }}</span>
-                        </div>
-                        <div class="profile-info">
-                            <label>Balance:</label>
-                            <span>${{ user.balance }}</span>
-                        </div>
-                        <div class="profile-info">
-                            <label>Phone Number:</label>
-                            <span>{{ user.phone_number }}</span>
+                        <div class="card-body">
+                            {% if card_info.transactions != "No transactions" %}
+                            {% for transaction in card_info.transactions %}
+                            <div class="transactions-info">
+                                <label>Status:</label>
+                                <span>{{ transaction.status }}</span>
+                            </div>
+                            <div class="transactions-info">
+                                <label>Date:</label>
+                                <span>{{ transaction.transaction_date }}</span>
+                            </div>
+                            <div class="transactions-info">
+                                <label>Amount:</label>
+                                <span>${{ transaction.amount }}</span>
+                            </div>
+                            <div class="transactions-info">
+                                <label>Card ID:</label>
+                                <span>{{ transaction.card_id }}</span>
+                            </div>
+                            <div class="transactions-info">
+                                <label>Receiver ID:</label>
+                                <span>{{ transaction.receiver_id }}</span>
+                            </div>
+                            <hr>
+                            {% endfor %}
+                            {% else %}
+                            <p>No transactions found.</p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="tab-pane fade" id="cards" role="tabpanel" aria-labelledby="cards-tab">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="cards-card">
-                            <div class="card-header">
-                                <h2>Cards</h2>
-                            </div>
-                            <div class="card-body">
-                                {% if card_info.cards %}
-                                    {% for card in card_info.cards %}
-                                        <div class="cards-info">
-                                            <label>Card Number:</label>
-                                            <span>{{ card.card_number }}</span>
-                                        </div>
-                                        <div class="cards-info">
-                                            <label>Balance:</label>
-                                            <span>${{ card.balance }}</span>
-                                        </div>
-                                        <div class="cards-info">
-                                            <label>Card Holder:</label>
-                                            <span>{{ card.card_holder }}</span>
-                                        </div>
-                                        <hr>
-                                    {% endfor %}
-                                {% else %}
-                                    <p>No cards found.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="transactions-card">
-                            <div class="card-header">
-                                <h2>Transactions</h2>
-                            </div>
-                            <div class="card-body">
-                                {% if card_info.transactions != "No transactions" %}
-                                    {% for transaction in card_info.transactions %}
-                                        <div class="transactions-info">
-                                            <label>Status:</label>
-                                            <span>{{ transaction.status }}</span>
-                                        </div>
-                                        <div class="transactions-info">
-                                            <label>Date:</label>
-                                            <span>{{ transaction.transaction_date }}</span>
-                                        </div>
-                                        <div class="transactions-info">
-                                            <label>Amount:</label>
-                                            <span>${{ transaction.amount }}</span>
-                                        </div>
-                                        <div class="transactions-info">
-                                            <label>Card ID:</label>
-                                            <span>{{ transaction.card_id }}</span>
-                                        </div>
-                                        <div class="transactions-info">
-                                            <label>Receiver ID:</label>
-                                            <span>{{ transaction.receiver_id }}</span>
-                                        </div>
-                                        <hr>
-                                    {% endfor %}
-                                {% else %}
-                                    <p>No transactions found.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+        </div>
+        <div class="tab-pane fade" id="deposit" role="tabpanel" aria-labelledby="deposit-tab">
+            {% include 'deposit.html' %}
+        </div>
+        <div class="tab-pane fade" id="withdraw" role="tabpanel" aria-labelledby="withdraw-tab">
+            {% include 'withdraw.html' %}
+        </div>
+        <div class="tab-pane fade" id="create-card" role="tabpanel" aria-labelledby="create-card-tab">
+            <div class="profile-card">
+                <div class="card-header">
+                    <h2>Create New Card</h2>
                 </div>
-            </div>
-            <div class="tab-pane fade" id="deposit" role="tabpanel" aria-labelledby="deposit-tab">
-                {% include 'deposit.html' %}
-            </div>
-            <div class="tab-pane fade" id="withdraw" role="tabpanel" aria-labelledby="withdraw-tab">
-                {% include 'withdraw.html' %}
+                <div class="card-body">
+                    <form id="createCardForm">
+                        <div class="form-group">
+                            <label for="cardNumber">Card Number</label>
+                            <input type="text" class="form-control" id="cardNumber" name="card_number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardHolder">Card Holder</label>
+                            <input type="text" class="form-control" id="cardHolder" name="card_holder" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cvv">CVV</label>
+                            <input type="text" class="form-control" id="cvv" name="cvv" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expirationDate">Expiration Date</label>
+                            <input type="text" class="form-control" id="expirationDate" name="expiration_date"
+                                   placeholder="MM/YY" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Card</button>
+                    </form>
+                    <div id="cardCreationMessage" class="mt-3"></div>
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Success Modal -->
-    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="successModalLabel">Success</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    Your transaction has been successfully processed.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-                </div>
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="successModalLabel">Success</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Your card has been successfully created.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('message') === 'success') {
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    document.getElementById('createCardForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const expirationDateInput = document.getElementById('expirationDate');
+        const expirationDate = expirationDateInput.value;
+        const dateRegex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
+
+        if (!dateRegex.test(expirationDate)) {
+            document.getElementById('cardCreationMessage').innerText = 'Invalid expiration date format. Please use MM/YY.';
+            return;
+        }
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const jsonData = JSON.stringify(Object.fromEntries(formData));
+
+        try {
+            const response = await fetch('/cards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: jsonData
+            });
+
+            if (response.ok) {
+                // Show the success modal
                 $('#successModal').modal('show');
+
+                // Fetch and update the "View Cards" tab after the modal is closed
+                $('#successModal').on('hidden.bs.modal', async function () {
+                    await updateCardsTab();
+                    // Activate "View Cards" tab
+                    $('#cards-tab').tab('show');
+                });
+            } else {
+                const errorData = await response.json();
+                document.getElementById('cardCreationMessage').innerText = `Error: ${errorData.detail}`;
             }
-        });
-    </script>
+        } catch (error) {
+            document.getElementById('cardCreationMessage').innerText = `Error: ${error.message}`;
+        }
+    });
+
+    async function updateCardsTab() {
+        try {
+            const response = await fetch('/cards');  // Adjust the endpoint as necessary
+            if (response.ok) {
+                const cardsData = await response.json();
+                const cardsTab = document.getElementById('cards');
+                let cardsContent = '';
+
+                if (cardsData.length > 0) {
+                    cardsData.forEach(card => {
+                        cardsContent += `
+                            <div class="cards-info">
+                                <label>Card Number:</label>
+                                <span>${card.card_number}</span>
+                            </div>
+                            <div class="cards-info">
+                                <label>Balance:</label>
+                                <span>$${card.balance}</span>
+                            </div>
+                            <div class="cards-info">
+                                <label>Card Holder:</label>
+                                <span>${card.card_holder}</span>
+                            </div>
+                            <hr>`;
+                    });
+                } else {
+                    cardsContent = '<p>No cards found.</p>';
+                }
+
+                cardsTab.querySelector('.card-body').innerHTML = cardsContent;
+            } else {
+                console.error('Failed to fetch cards data');
+            }
+        } catch (error) {
+            console.error('Error fetching cards data:', error);
+        }
+    }
+</script>
+
 </body>
 </html>

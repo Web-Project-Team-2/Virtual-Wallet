@@ -181,7 +181,7 @@ async def deposit_money(user_id: int, balance: int):
     new_balance = balance + get_user_balance[0][0]
     update_result = await update_query('UPDATE users SET balance = $1 WHERE id = $2', (new_balance, user_id))
     if update_result:
-        return "You have successfully deposited ${balance} into your virtual wallet."
+        return f"You have successfully deposited ${balance} into your virtual wallet."
     else:
         return f"Unable to deposit ${balance} into your account."
 
@@ -192,7 +192,7 @@ async def withdraw_money(user_id: int, withdraw: int):
     new_balance = get_user_balance[0][0] - withdraw
     update_result = await update_query('UPDATE users SET balance = $1 WHERE id = $2', (new_balance, user_id))
     if update_result:
-        return "You have successfully withdrawn ${withdraw} from your virtual wallet."
+        return f"You have successfully withdrawn ${withdraw} from your virtual wallet."
     else:
         return f"Unable to withdraw ${withdraw} into your account."
 
