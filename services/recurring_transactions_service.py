@@ -1,9 +1,6 @@
 from data.models.recurring_transactions import RecurringTransaction
-from data.models.user import User
-from data.models.cards import Card
-from data.models.categories import Category
 from data.database_queries import read_query, insert_query, update_query
-from common.responses import BadRequest, NotFound
+from common.responses import BadRequest
 from datetime import datetime
 
 
@@ -37,32 +34,32 @@ async def view_all_recurring_transactions(current_user: int,
         Filter recurring transactions by category ID.
     '''
 
+    sql_parameters = []
     loc_sql_recurring_transactions = sql_recurring_transactions
 
     if recurring_transaction_date or categories_id:
         filter_by = []
-        sql_parameters = []
         if recurring_transaction_date:
             recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
             if not recurring_transaction_date:
                 return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
-            filter_by.append(f'recurring_transaction_date = $1')
+            filter_by.append(f'recurring_transaction_date = ${len(sql_parameters) + 1}')
             sql_parameters.append(recurring_transaction_date)
         if categories_id:
-            filter_by.append(f'categories_id = %2')
+            filter_by.append(f'categories_id = ${len(sql_parameters) + 1}')
             sql_parameters.append(categories_id)
 
         if filter_by:
             loc_sql_recurring_transactions += ' WHERE ' + ' AND '.join(filter_by)
 
         sql_parameters = tuple(sql_parameters)
-        rows = await read_query(sql=loc_sql_recurring_transactions ,
+        rows = await read_query(sql=loc_sql_recurring_transactions,
                                 sql_params=sql_parameters)
     
         if rows is not None:
             return [RecurringTransaction.from_query_result(*row) for row in rows]
         else:
-            return NotFound(content=f'The required transactions you are looking for are not available.')
+            return None
      
     else:
         recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
@@ -74,7 +71,10 @@ async def view_all_recurring_transactions(current_user: int,
             if recurring_transaction not in recurring_transactions_all:
                 recurring_transactions_all.append(recurring_transaction)
 
-        return recurring_transactions_all
+        if recurring_transactions_all != []:
+            return recurring_transactions_all
+        else:
+            return None
 
 
 def sort_recurring_transactions(recurring_transactions: list[RecurringTransaction], *,
@@ -116,11 +116,11 @@ async def view_recurring_transaction_by_id(recurring_transaction_id: int,
     recurring_transactions = await read_query(sql=sender_id_recurring_transactions,
                                               sql_params=(current_user,))
 
-    if not recurring_transactions:
+    if recurring_transactions:
+        recurring_transaction_by_id = await read_query(sql=id_recurring_transactions,
+                                                       sql_params=(recurring_transaction_id,))
+    else:
         return None
-    
-    recurring_transaction_by_id = await read_query(sql=id_recurring_transactions,
-                                                   sql_params=(recurring_transaction_id,))
      
     recurring_transaction = next((RecurringTransaction.from_query_result(*row) for row in recurring_transaction_by_id), None)
 
@@ -147,7 +147,10 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
 
     recurring_transaction.id = generated_id
 
-    return recurring_transaction
+    if recurring_transaction is not None:
+        return recurring_transaction
+    else:
+        return None
 
 
 async def preview_edited_recurring_transaction(recurring_transaction_id: int,
@@ -248,11 +251,11 @@ async def preview_sent_recurring_transaction(recurring_transaction_id: int,
     return sent_recurring_transaction
 
 
-async def preview_confirm_recurring_transaction(recurring_transaction_id: int,
-                                                amount: float,
-                                                status: str,
-                                                condition_action: str,
-                                                current_user: int):
+async def preview_confirmed_recurring_transaction(recurring_transaction_id: int,
+                                                  amount: float,
+                                                  status: str,
+                                                  condition_action: str,
+                                                  current_user: int):
     '''
     This function previews a recurring transaction if it will be confirmed.\n
     Parameters:\n
@@ -294,9 +297,9 @@ async def preview_confirm_recurring_transaction(recurring_transaction_id: int,
     return confirmed_recurring_transaction
 
 
-async def preview_cancel_recurring_transaction(recurring_transaction_id: int,
-                                               status: str,
-                                               condition_action: str):
+async def preview_cancelled_recurring_transaction(recurring_transaction_id: int,
+                                                  status: str,
+                                                  condition_action: str):
     '''
     This function previews a recurring transaction if it will be cancelled.\n
     Parameters:\n
@@ -327,11 +330,11 @@ async def preview_cancel_recurring_transaction(recurring_transaction_id: int,
     return cancelled_recurring_transaction
 
 
-async def preview_decline_recurring_transaction(recurring_transaction_id: int,
-                                                amount: float,
-                                                status: str,
-                                                condition_action: str,
-                                                current_user: int):
+async def preview_declined_recurring_transaction(recurring_transaction_id: int,
+                                                 amount: float,
+                                                 status: str,
+                                                 condition_action: str,
+                                                 current_user: int):
     '''
     This function previews a recurring transaction if it will be declined.\n
     Parameters:\n

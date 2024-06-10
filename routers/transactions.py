@@ -358,11 +358,11 @@ async def preview_transaction(transaction_id: int,
          direction = 'outgoing'
       if current_user == receiver.id:
          direction = 'incoming'
-      if transaction_view.status == 'pending' and transaction_view.condition == 'edited': 
+      if transaction.status == 'pending' and transaction.condition == 'edited': 
          message = f'This transaction hasn\'t been sent.'
-      if transaction_view.status == 'confirmed' and transaction_view.condition == 'sent': 
+      if transaction.status == 'confirmed' and transaction.condition == 'sent': 
          message = f'This transaction has been successfully sent.'
-      if transaction_view.status == 'declined' and transaction_view.condition == 'cancelled': 
+      if transaction.status == 'declined' and transaction.condition == 'cancelled': 
          message = f'This transaction has been cancelled.'
 
       condition_action = transaction.condition
@@ -396,7 +396,7 @@ async def preview_transaction(transaction_id: int,
             transaction_ready = transaction_sent
          elif condition_action == 'cancelled' and transaction.status == 'pending':
             status = 'declined'
-            transaction_cancelled = await transactions_service.preview_cancel_transaction(transaction_id=transaction_id, 
+            transaction_cancelled = await transactions_service.preview_cancelled_transaction(transaction_id=transaction_id, 
                                                                                           status=status,
                                                                                           condition_action=condition_action)
             if transaction_cancelled is not None: 
@@ -434,7 +434,7 @@ async def preview_transaction(transaction_id: int,
             transaction_ready = transaction_sent
          elif condition_action == 'cancelled' and transaction.status == 'pending':
             status = 'declined'
-            transaction_cancelled = await transactions_service.preview_cancel_transaction(transaction_id=transaction_id,
+            transaction_cancelled = await transactions_service.preview_cancelled_transaction(transaction_id=transaction_id,
                                                                                           status=status,
                                                                                           condition_action=condition_action)
             if transaction_cancelled is not None: 
@@ -447,7 +447,7 @@ async def preview_transaction(transaction_id: int,
          amount = transaction.amount
          status = 'confirmed'
          condition_action = 'sent'
-         transaction_confirmed = await transactions_service.preview_confirm_transaction(transaction_id=transaction_id,
+         transaction_confirmed = await transactions_service.preview_confirmed_transaction(transaction_id=transaction_id,
                                                                                           amount=amount,
                                                                                           status=status,
                                                                                           condition_action=condition_action,
@@ -462,7 +462,7 @@ async def preview_transaction(transaction_id: int,
          amount = transaction.amount
          status = 'declined'
          condition_action = 'cancelled'
-         transaction_declined = await transactions_service.preview_decline_transaction(transaction_id=transaction_id,
+         transaction_declined = await transactions_service.preview_declined_transaction(transaction_id=transaction_id,
                                                                                        amount=amount,
                                                                                        status=status,
                                                                                        condition_action=condition_action,

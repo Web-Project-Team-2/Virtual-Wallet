@@ -24,10 +24,10 @@ values_transactions = '''INSERT INTO transactions(status, condition, transaction
 
 
 async def view_all_transactions(current_user: int,
-                                transaction_date: str,
-                                sender: str,
-                                receiver: str,
-                                direction: str):
+                                transaction_date: str | None = None,
+                                sender: str | None = None,
+                                receiver: str | None = None,
+                                direction: str | None = None):
      '''
      This function returns a list of all the transactions for the specified user.\n
      Parameters:\n
@@ -73,7 +73,8 @@ async def view_all_transactions(current_user: int,
                loc_sql_transactions += ' WHERE ' + ' AND '.join(filter_by)
 
           sql_parameters = tuple(sql_parameters)
-          rows = await read_query(sql=loc_sql_transactions, sql_params=sql_parameters)
+          rows = await read_query(sql=loc_sql_transactions,
+                                  sql_params=sql_parameters)
 
           if rows is not None:
                return [Transaction.from_query_result(*row) for row in rows]
@@ -358,7 +359,7 @@ async def preview_sent_transaction(transaction_id: int,
      return sent_transaction
 
 
-async def preview_confirm_transaction(transaction_id: int,
+async def preview_confirmed_transaction(transaction_id: int,
                                       amount: float,
                                       status: str,
                                       condition_action: str,
@@ -404,7 +405,7 @@ async def preview_confirm_transaction(transaction_id: int,
      return confirmed_transaction
 
 
-async def preview_cancel_transaction(transaction_id: int,
+async def preview_cancelled_transaction(transaction_id: int,
                                      status: str,
                                      condition_action: str):
      '''
@@ -437,7 +438,7 @@ async def preview_cancel_transaction(transaction_id: int,
      return cancelled_transaction
 
 
-async def preview_decline_transaction(transaction_id: int,
+async def preview_declined_transaction(transaction_id: int,
                                       amount: float,
                                       status: str,
                                       condition_action: str,
