@@ -19,27 +19,31 @@ frontend_router = APIRouter()
 async def get_register_form(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
-
 @frontend_router.post("/register", response_class=HTMLResponse)
 async def register_user(request: Request, username: str = Form(...), password: str = Form(...), email: str = Form(...),
                         phone_number: str = Form(...)):
-    user_create = UserCreate(username=username, password=password, email=email, phone_number=phone_number)
-    check_password(user_create.password)
-    hashed_password = password_hashing.get_password_hash(user_create.password)
-    user_create.password = hashed_password
-    new_user = await user_services.create(user_create.username, user_create.password, user_create.email,
-                                          user_create.phone_number)
-    if not new_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Username, email, or phone number is already taken.")
+    try:
+        user_create = UserCreate(username=username, password=password, email=email, phone_number=phone_number)
+        check_password(user_create.password)
+        hashed_password = password_hashing.get_password_hash(user_create.password)
+        user_create.password = hashed_password
+        new_user = await user_services.create(user_create.username, user_create.password, user_create.email,
+                                              user_create.phone_number)
+        if not new_user:
+            return templates.TemplateResponse("register.html", {"request": request, "error_message": "Username, email, or phone number is already taken."})
 
-    # Generate token for the newly registered user
-    access_token = create_access_token(data={"user_id": new_user.id})
+        # Generate token for the newly registered user
+        access_token = create_access_token(data={"user_id": new_user.id})
 
-    response = RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie(key="access_token", value=access_token, httponly=True)  # Use httponly for security
+        response = RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
+        response.set_cookie(key="access_token", value=access_token, httponly=True)  # Use httponly for security
 
-    return response
+        return response
+    except HTTPException as e:
+        return templates.TemplateResponse("register.html", {"request": request, "error_message": e.detail})
+    except Exception as e:
+        return templates.TemplateResponse("register.html", {"request": request, "error_message": "An unexpected error occurred. Please try again."})
+
 
 
 
