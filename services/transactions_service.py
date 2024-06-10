@@ -50,10 +50,11 @@ async def view_all_transactions(current_user: int,
      if transaction_date or sender or receiver or direction:
           filter_by = []
           if transaction_date:
-               transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
-               if not transaction_date:
+               try:
+                    transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
+               except ValueError:
                     return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
-               filter_by.append(f'transaction_date = ${len(sql_parameters) + 1}')
+               filter_by.append(f'DATE(transaction_date) = ${len(sql_parameters) + 1}')
                sql_parameters.append(transaction_date)
           if sender:
                filter_by.append(f'sender_id = ${len(sql_parameters) + 1}')
@@ -76,7 +77,7 @@ async def view_all_transactions(current_user: int,
           rows = await read_query(sql=loc_sql_transactions,
                                   sql_params=sql_parameters)
 
-          if rows is not None:
+          if rows != []:
                return [Transaction.from_query_result(*row) for row in rows]
           else:
                return None
@@ -262,9 +263,9 @@ async def create_transaction_to_users_category(transaction: Transaction,
 
 
 async def preview_edited_transaction(transaction_id: int,
-                                     new_amount: float,
-                                     new_category_name: str,
-                                     new_receiver_id: int):
+                                     new_amount: float | None = None,
+                                     new_category_name: str | None = None,
+                                     new_receiver_id: int | None = None):
      '''
      Preview the edited transaction with the given parameters.\n
      Parameters:\n
@@ -278,26 +279,26 @@ async def preview_edited_transaction(transaction_id: int,
           - The new receiver ID for the transaction. If None, the receiver remains unchanged.
      '''
 
-     transactions = read_query(sql=id_transactions,
-                               sql_params=(transaction_id,))
+     transactions = await read_query(sql=id_transactions,
+                                     sql_params=(transaction_id,))
 
      transaction = next((Transaction.from_query_result(*row) for row in transactions), None)
 
      if transaction is None:
         return None
 
-     if new_amount:
+     if new_amount is not None:
           edited_transaction = await update_query(sql='UPDATE transactions SET amount = $1 WHERE id = $2',
                                                   sql_params=(new_amount, transaction_id))
-     if new_category_name:
+     if new_category_name is not None:
           edited_transaction = await update_query(sql='UPDATE transactions SET category_name = $1 WHERE id = $2',
                                                   sql_params=(new_category_name, transaction_id))
-     if new_receiver_id:
+     if new_receiver_id is not None:
           edited_transaction = await update_query(sql='UPDATE transactions SET receiver_id = $1 WHERE id = $2',
                                                   sql_params=(new_receiver_id, transaction_id))
           
-     edited_transactions = read_query(sql=id_transactions,
-                                      sql_params=(transaction_id,))
+     edited_transactions = await read_query(sql=id_transactions,
+                                            sql_params=(transaction_id,))
 
      edited_transaction = next((Transaction.from_query_result(*row) for row in edited_transactions), None)
 
