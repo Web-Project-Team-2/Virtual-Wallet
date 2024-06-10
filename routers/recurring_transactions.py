@@ -44,7 +44,7 @@ async def get_users_recurring_transactions(sort: str | None = None,
                                                                                                         recurring_transaction_date=recurring_transaction_date,
                                                                                                         categories_id=categories_id)
 
-    if users_recurring_transactions is not None:
+    if users_recurring_transactions != [] or users_recurring_transactions != None:
         recurring_transactions_view = []
         for users_recurring_transaction in users_recurring_transactions:
             sender = await user_services.get_user_by_id(user_id=users_recurring_transaction.sender_id)
@@ -68,8 +68,6 @@ async def get_users_recurring_transactions(sort: str | None = None,
             return recurring_transactions_service.sort_recurring_transactions(recurring_transactions=recurring_transactions_view,
                                                                             reverse=sort == 'desc',
                                                                             attribute=sort_by)
-        elif recurring_transactions_view == []:
-            return NotFound(content='Required data not found.')
         else:
             return recurring_transactions_view
     

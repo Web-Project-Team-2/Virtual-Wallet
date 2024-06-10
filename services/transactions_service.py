@@ -50,10 +50,11 @@ async def view_all_transactions(current_user: int,
      if transaction_date or sender or receiver or direction:
           filter_by = []
           if transaction_date:
-               transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
-               if not transaction_date:
+               try:
+                    transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
+               except ValueError:
                     return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
-               filter_by.append(f'transaction_date = ${len(sql_parameters) + 1}')
+               filter_by.append(f'DATE(transaction_date) = ${len(sql_parameters) + 1}')
                sql_parameters.append(transaction_date)
           if sender:
                filter_by.append(f'sender_id = ${len(sql_parameters) + 1}')
@@ -76,7 +77,7 @@ async def view_all_transactions(current_user: int,
           rows = await read_query(sql=loc_sql_transactions,
                                   sql_params=sql_parameters)
 
-          if rows is not None:
+          if rows != []:
                return [Transaction.from_query_result(*row) for row in rows]
           else:
                return None

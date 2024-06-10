@@ -40,10 +40,11 @@ async def view_all_recurring_transactions(current_user: int,
     if recurring_transaction_date or categories_id:
         filter_by = []
         if recurring_transaction_date:
-            recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
-            if not recurring_transaction_date:
+            try:
+                recurring_transaction_date = datetime.strptime(recurring_transaction_date, '%Y-%m-%d').date()
+            except ValueError:
                 return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
-            filter_by.append(f'recurring_transaction_date = ${len(sql_parameters) + 1}')
+            filter_by.append(f'DATE(recurring_transaction_date) = ${len(sql_parameters) + 1}')
             sql_parameters.append(recurring_transaction_date)
         if categories_id:
             filter_by.append(f'categories_id = ${len(sql_parameters) + 1}')
@@ -56,7 +57,7 @@ async def view_all_recurring_transactions(current_user: int,
         rows = await read_query(sql=loc_sql_recurring_transactions,
                                 sql_params=sql_parameters)
     
-        if rows is not None:
+        if rows != []:
             return [RecurringTransaction.from_query_result(*row) for row in rows]
         else:
             return None
