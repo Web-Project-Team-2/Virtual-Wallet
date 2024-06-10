@@ -8,13 +8,14 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            background: url('wallet-texture.jpg') no-repeat center center fixed;
+            background-size: cover;
             padding: 20px;
         }
         .profile-container {
             max-width: 900px;
             margin: 0 auto;
-            background-color: #fff;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 30px;
@@ -55,7 +56,7 @@
             border: 1px solid #007bff;
             border-radius: 8px;
             margin-bottom: 20px;
-            background-color: #f8f9fa;
+            background-color: rgba(248, 249, 250, 0.9); /* Slightly transparent light background */
         }
         .card-header, .profile-card .card-header, .cards-card .card-header, .transactions-card .card-header {
             background-color: #007bff;
@@ -76,8 +77,14 @@
             top: 20px;
             right: 20px;
         }
+        .cards-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #007bff;
+            border-radius: 8px;
+            background-color: #fff;
+        }
     </style>
-
 </head>
 <body>
 <div class="profile-container">
@@ -151,18 +158,19 @@
                             {% if card_info.cards %}
                             {% for card in card_info.cards %}
                             <div class="cards-info">
-                                <label>Card Number:</label>
-                                <span>{{ card.card_number }}</span>
+                                <div class="cards-info-content">
+                                    <label>Card Number:</label>
+                                    <span>{{ card.card_number }}</span>
+                                </div>
+                                <div class="cards-info-content">
+                                    <label>Balance:</label>
+                                    <span>${{ card.balance }}</span>
+                                </div>
+                                <div class="cards-info-content">
+                                    <label>Card Holder:</label>
+                                    <span>{{ card.card_holder }}</span>
+                                </div>
                             </div>
-                            <div class="cards-info">
-                                <label>Balance:</label>
-                                <span>${{ card.balance }}</span>
-                            </div>
-                            <div class="cards-info">
-                                <label>Card Holder:</label>
-                                <span>{{ card.card_holder }}</span>
-                            </div>
-                            <hr>
                             {% endfor %}
                             {% else %}
                             <p>No cards found.</p>
@@ -327,18 +335,19 @@
                     cardsData.forEach(card => {
                         cardsContent += `
                             <div class="cards-info">
-                                <label>Card Number:</label>
-                                <span>${card.card_number}</span>
-                            </div>
-                            <div class="cards-info">
-                                <label>Balance:</label>
-                                <span>$${card.balance}</span>
-                            </div>
-                            <div class="cards-info">
-                                <label>Card Holder:</label>
-                                <span>${card.card_holder}</span>
-                            </div>
-                            <hr>`;
+                                <div class="cards-info-content">
+                                    <label>Card Number:</label>
+                                    <span>${card.card_number}</span>
+                                </div>
+                                <div class="cards-info-content">
+                                    <label>Balance:</label>
+                                    <span>$${card.balance}</span>
+                                </div>
+                                <div class="cards-info-content">
+                                    <label>Card Holder:</label>
+                                    <span>${card.card_holder}</span>
+                                </div>
+                            </div>`;
                     });
                 } else {
                     cardsContent = '<p>No cards found.</p>';
