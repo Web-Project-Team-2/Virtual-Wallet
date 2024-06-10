@@ -218,53 +218,17 @@ async def preview_recurring_transaction(recurring_transaction_id: int,
         if recurring_transaction.status == 'declined' and recurring_transaction.condition == 'cancelled': 
             message = f'This transaction has been cancelled.'
 
-        if current_user == sender.id and current_user == receiver.id:
+        if current_user == sender.id and current_user != receiver.id:
             if condition_action == 'edited':
-                new_amount = recurring_transaction.amount
-                new_category_name = recurring_transaction.category_name
-                new_receiver_id = recurring_transaction.receiver_id
-                recurring_transaction_edited = await recurring_transactions_service.preview_edited_recurring_transaction(recurring_transaction_id=recurring_transaction_id,
-                                                                                            new_amount=new_amount,
-                                                                                            new_category_name=new_category_name,
-                                                                                            new_receiver_id=new_receiver_id)
-                if recurring_transaction_edited is not None: 
-                    message = f'The recurring transaction has been successfully edited.'
-                else:
-                    return BadRequest(content=f'Recurring transaction editing has failed.')
-                recurring_transaction_ready = recurring_transaction_edited
-            elif condition_action == 'sent' and recurring_transaction.status == 'pending':
-                amount = recurring_transaction.amount
-                status = 'confirmed'
-                recurring_transaction_sent = await recurring_transactions_service.preview_sent_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                    amount=amount,
-                                                                                                    status=status,
-                                                                                                    condition_action=condition_action,
-                                                                                                    current_user=current_user)
-                if recurring_transaction_sent is not None: 
-                    message = f'The recurring transaction has been successfully sent.'
-                else:
-                    return BadRequest(content=f'Recurring transaction sending has failed.')
-                recurring_transaction_ready = recurring_transaction_sent
-            elif condition_action == 'cancelled' and recurring_transaction.status == 'pending':
-                status = 'declined'
-                recurring_transaction_cancelled = await recurring_transactions_service.preview_cancelled_recurring_transaction(transaction_id=recurring_transaction_id, 
-                                                                                                            status=status,
-                                                                                                            condition_action=condition_action)
-                if recurring_transaction_cancelled is not None: 
-                    message = f'The recurring transaction has been cancelled.'
-                else:
-                    return BadRequest(content=f'Recurring transaction cancelling has failed.')
-                recurring_transaction_ready = recurring_transaction_cancelled
-
-        elif current_user == sender.id and current_user != receiver.id:
-            if condition_action == 'edited':
+                new_next_payment = recurring_transaction.next_payment
                 new_amount = recurring_transaction.amount
                 new_category_name = recurring_transaction.category_name
                 new_receiver_id = recurring_transaction.receiver_id
                 recurring_transaction_edited = await recurring_transactions_service.preview_edited_recurring_transaction(transaction_id=recurring_transaction_id,
-                                                                                                        new_amount=new_amount,
-                                                                                                        new_category_name=new_category_name,
-                                                                                                        new_receiver_id=new_receiver_id )
+                                                                                                                         new_next_payment=new_next_payment,
+                                                                                                                         new_amount=new_amount,
+                                                                                                                         new_category_name=new_category_name,
+                                                                                                                         new_receiver_id=new_receiver_id )
                 if recurring_transaction_edited is not None: 
                     message = f'The recurring transaction has been successfully edited.'
                 else:

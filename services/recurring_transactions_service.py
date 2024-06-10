@@ -155,9 +155,10 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
 
 
 async def preview_edited_recurring_transaction(recurring_transaction_id: int,
-                                               new_amount: float,
-                                               new_category_name: str,
-                                               new_receiver_id: int):
+                                               new_next_payment: str | None = None,
+                                               new_amount: float | None = None,
+                                               new_category_name: str | None = None,
+                                               new_receiver_id: int | None = None):
     '''
     This function previews a recurring transaction if it will be edited.\n
     Parameters:\n
@@ -180,14 +181,21 @@ async def preview_edited_recurring_transaction(recurring_transaction_id: int,
 
     if recurring_transaction is None:
         return None 
-
-    if new_amount:
+    
+    if new_next_payment is not None:
+        try:
+            new_next_payment = datetime.strptime(new_next_payment, '%Y-%m-%d').date()
+        except ValueError:
+                    return BadRequest(content=f'Incorrect date format, should be YYYY-MM-DD.')
+        edited_recurring_transaction = await update_query(sql='UPDATE DATE(recurring_transactions) SET next_payment = $1 WHERE id = $2',
+                                                          sql_params=(new_next_payment, recurring_transaction_id))
+    if new_amount is not None:
         edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET amount = $1 WHERE id = $2',
                                                           sql_params=(new_amount, recurring_transaction_id))
-    if new_category_name:
+    if new_category_name is not None:
         edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET category_name = $1 WHERE id = $2',
                                                           sql_params=(new_category_name, recurring_transaction_id))
-    if new_receiver_id:
+    if new_receiver_id is not None:
         edited_recurring_transaction = await update_query(sql='UPDATE recurring_transactions SET receiver_id = $1 WHERE id = $2',
                                                           sql_params=(new_receiver_id, recurring_transaction_id))
           
