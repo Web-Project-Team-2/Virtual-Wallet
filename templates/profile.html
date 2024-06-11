@@ -84,6 +84,17 @@
             border-radius: 8px;
             background-color: #fff;
         }
+        .transaction-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #007bff;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        .transaction-item hr {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -186,27 +197,24 @@
                         <div class="card-body">
                             {% if card_info.transactions != "No transactions" %}
                             {% for transaction in card_info.transactions %}
-                            <div class="transactions-info">
-                                <label>Status:</label>
-                                <span>{{ transaction.status }}</span>
+                            <div class="transaction-item">
+                                <div class="transactions-info">
+                                    <label>Status:</label>
+                                    <span>{{ transaction.status }}</span>
+                                </div>
+                                <div class="transactions-info">
+                                    <label>Date:</label>
+                                    <span>{{ transaction.transaction_date }}</span>
+                                </div>
+                                <div class="transactions-info">
+                                    <label>Amount:</label>
+                                    <span>${{ transaction.amount }}</span>
+                                </div>
+                                <div class="transactions-info">
+                                    <label>Receiver ID:</label>
+                                    <span>{{ transaction.receiver_id }}</span>
+                                </div>
                             </div>
-                            <div class="transactions-info">
-                                <label>Date:</label>
-                                <span>{{ transaction.transaction_date }}</span>
-                            </div>
-                            <div class="transactions-info">
-                                <label>Amount:</label>
-                                <span>${{ transaction.amount }}</span>
-                            </div>
-                            <div class="transactions-info">
-                                <label>Card ID:</label>
-                                <span>{{ transaction.card_id }}</span>
-                            </div>
-                            <div class="transactions-info">
-                                <label>Receiver ID:</label>
-                                <span>{{ transaction.receiver_id }}</span>
-                            </div>
-                            <hr>
                             {% endfor %}
                             {% else %}
                             <p>No transactions found.</p>
