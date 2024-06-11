@@ -90,7 +90,8 @@ From the user's profile, you can:
 
 Refer to the project documentation or contact the development team for additional configuration or troubleshooting.
 
-
-
-## 5. Database
+## Database
 ![database](./database.png)
+
+## Swagger documentation
+- http://127.0.0.1:8000/redoc
