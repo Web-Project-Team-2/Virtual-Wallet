@@ -70,16 +70,18 @@ To start the project, follow these steps:
     DB_MIN_SIZE=1
     DB_MAX_SIZE=10
     ```
-3. **Install dependencies**:
+    Make sure to replace the placeholder values (`your_secret_key`, `your_db_user`, etc.) with your actual configuration details.
+    
+4. **Install dependencies**:
     Ensure you have Docker installed. All dependencies are managed via Docker, so you don't need to install anything manually except Docker.
 
-4. **Start the application**:
+5. **Start the application**:
     Use Docker Compose to build and run the project:
     ```bash
     docker-compose up --build
     ```
 
-5. **Install Python dependencies**:
+6. **Install Python dependencies**:
     The project includes a `requirements.txt` file for Python dependencies. If you need to set up a local environment for development or testing outside of Docker, you can install these dependencies using pip:
     ```bash
     pip install -r requirements.txt
