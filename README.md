@@ -56,17 +56,30 @@ To start the project, follow these steps:
     git clone <repository_url>
     cd <repository_name>
     ```
+2.  Create a `.env` file in the root of the project directory and add the following environment variables:
+    ```
+    SECRET_KEY=your_secret_key
+    ALGORITHM=HS256
+    ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-2. **Install dependencies**:
+    DB_USER=your_db_user
+    DB_PASSWORD=your_db_password
+    DB_HOST=your_db_host
+    DB_PORT=your_db_port
+    DB_NAME=your_db_name
+    DB_MIN_SIZE=1
+    DB_MAX_SIZE=10
+    ```
+3. **Install dependencies**:
     Ensure you have Docker installed. All dependencies are managed via Docker, so you don't need to install anything manually except Docker.
 
-3. **Start the application**:
+4. **Start the application**:
     Use Docker Compose to build and run the project:
     ```bash
     docker-compose up --build
     ```
 
-4. **Install Python dependencies**:
+5. **Install Python dependencies**:
     The project includes a `requirements.txt` file for Python dependencies. If you need to set up a local environment for development or testing outside of Docker, you can install these dependencies using pip:
     ```bash
     pip install -r requirements.txt
