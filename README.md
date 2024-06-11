@@ -93,5 +93,6 @@ Refer to the project documentation or contact the development team for additiona
 ## Database
 ![database](./database.png)
 
-## Swagger documentation
+## ReDoc and Swagger UI documentation
 - http://127.0.0.1:8000/redoc
+- http://127.0.0.1:8000/docs

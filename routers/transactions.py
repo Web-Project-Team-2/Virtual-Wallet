@@ -5,7 +5,7 @@ from common.authorization import get_current_user
 from common.responses import BadRequest, NotFound
 from data.models.transactions import Transaction
 from schemas.transactions import TransactionViewAll, TransactionView
-from services import transactions_service, user_services, cards_services, categories_service
+from services import transactions_service, user_services, cards_services, contacts_service
 
 
 transactions_router = APIRouter(prefix='/api/transactions')
@@ -220,8 +220,8 @@ async def create_transaction_user(transaction: Transaction,
    if not sender or not receiver:
       return NotFound(content='Required data not found. Therefore you cannot continue forward.')
 
-   contact = await transactions_service.contact_id_exists(current_user=current_user,
-                                                          reciever_id=transaction.receiver_id)
+   contact = await contacts_service.contact_id_exists(current_user=current_user,
+                                                      reciever_id=transaction.receiver_id)
    receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
    card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
    card_holder = await cards_services.get_card_info_by_id(card_id=card_id)
@@ -290,8 +290,8 @@ async def create_transaction_category(transaction: Transaction,
    if not sender or not receiver:
       return NotFound(content='Required data not found. Therefore you cannot continue forward.')
    
-   contact = await transactions_service.contact_id_exists(current_user=current_user,
-                                                          reciever_id=transaction.receiver_id)
+   contact = await contacts_service.contact_id_exists(current_user=current_user,
+                                                      reciever_id=transaction.receiver_id)
    receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
    card_id = await cards_services.get_card_by_user_id(cards_user_id=cards_user_id)
    card_holder = await cards_services.get_card_info_by_id(card_id=card_id)
