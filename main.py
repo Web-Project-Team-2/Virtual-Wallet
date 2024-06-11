@@ -11,6 +11,7 @@ from routers.frontend import frontend_router
 from routers.users import users_router, public_router
 from routers.transactions import transactions_router
 from routers.recurring_transactions import recurring_transactions_router
+from routers.contacts import contacts_router
 import uvicorn
 
 app = FastAPI()
@@ -22,6 +23,7 @@ app.include_router(cards_router)
 app.include_router(public_router)
 app.include_router(admin_router)
 app.include_router(frontend_router)
+app.include_router(contacts_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")

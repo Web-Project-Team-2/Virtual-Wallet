@@ -388,20 +388,3 @@ async def recurring_transaction_id_exists(recurring_transaction_id: int) -> bool
 
     return any(await read_query(sql=id_recurring_transactions,
                                          sql_params=(recurring_transaction_id,)))
-
-
-async def contact_id_exists(current_user: int,
-                            reciever_id: int) -> bool:
-    '''
-    This function checks if a contact exists between the current user and the receiver.\n
-    Parameters:\n
-    - current_user : int\n
-        - The ID of the current authenticated user.\n
-    - reciever_id : int\n
-        - The ID of the receiver to check the contact against.
-    '''
-
-    return any(await read_query(sql='''SELECT users_id, contact_user_id
-                                                FROM contacts 
-                                                WHERE users_id = $1 AND contact_user_id = $2''',
-                                        sql_params=(current_user, reciever_id,)))

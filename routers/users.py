@@ -7,7 +7,7 @@ from common.authorization import create_access_token, get_current_user
 from common.helper_functions import check_password
 from common.wallet_info import detailed_info
 from routers.frontend import templates
-from schemas.contact import ContactCreate
+from schemas.contacts import ContactCreate
 from schemas.deposit import Deposit
 from schemas.withdraw import WithdrawMoney
 from schemas.user import UserCreate, UserLogin, UserInfoUpdate, UserOut

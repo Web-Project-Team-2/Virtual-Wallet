@@ -3,7 +3,7 @@ from common.responses import NotFound, BadRequest
 from common.authorization import get_current_user
 from data.models.recurring_transactions import RecurringTransaction
 from schemas.recurring_transactions import RecurringTransactionViewAll, RecurringTransactionView
-from services import recurring_transactions_service, user_services, categories_service, cards_services
+from services import recurring_transactions_service, user_services, categories_service, cards_services, contacts_service
 from datetime import datetime, timedelta
 from typing import List
 
@@ -137,8 +137,8 @@ async def create_recurring_transaction(recurring_transaction: RecurringTransacti
 
     sender = await user_services.get_user_by_id(user_id=sender_id)
     receiver = await user_services.get_user_by_id(user_id=receiver_id)
-    contact = await recurring_transactions_service.contact_id_exists(current_user=current_user,
-                                                    reciever_id=recurring_transaction.receiver_id)
+    contact = await contacts_service.contact_id_exists(current_user=current_user,
+                                                       reciever_id=recurring_transaction.receiver_id)
     category_name = await categories_service.get_category_by_id(category_id=categories_id)
     receiver_status = await user_services.get_user_by_status(user_id=receiver.id)
 
