@@ -2,9 +2,8 @@ import unittest
 from unittest.mock import patch, AsyncMock
 from fastapi import HTTPException, status
 from typing import List
-from schemas.contacts import ContactsViewAll, ContactView
+from schemas.contacts import ContactView
 from routers.contacts import get_users_contacts, get_users_contact_by_id, create_contact
-from services import contacts_service, user_services
 from data.models.contacts import Contact
 from common.responses import NotFound
 

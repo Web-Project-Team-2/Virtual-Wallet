@@ -1,5 +1,4 @@
 from data.models.contacts import Contact
-from data.database_queries import read_query, insert_query
 from services.contacts_service import view_all_contacts, view_contact_by_id, create_contact, contact_id_exists
 import unittest
 from unittest.mock import patch, AsyncMock

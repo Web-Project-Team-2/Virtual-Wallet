@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch, AsyncMock
 from fastapi import HTTPException
-from services import transactions_service, user_services
 from routers.transactions import get_users_transactions
 from data.models.transactions import Transaction
 from data.models.user import User
