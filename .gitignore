@@ -155,4 +155,5 @@ cython_debug/
 .vscode/
 
 # Ignore the different db password
-data/connection.py 
+data/connection.py .env
+

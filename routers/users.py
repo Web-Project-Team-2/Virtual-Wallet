@@ -18,10 +18,6 @@ users_router = APIRouter(prefix='/api/users')
 public_router = APIRouter()
 
 
-@users_router.get("/register", response_class=HTMLResponse)
-async def get_register_form(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
-
 
 @users_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserOut, tags=["Users"])
 async def register(user_create: UserCreate):
