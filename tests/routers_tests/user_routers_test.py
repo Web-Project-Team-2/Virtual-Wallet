@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, AsyncMock
 from fastapi import HTTPException, status
 from schemas.user import UserCreate, UserLogin, UserInfoUpdate, UserOut
-from schemas.contact import ContactCreate
+from schemas.contacts import ContactCreate
 from schemas.deposit import Deposit
 from schemas.withdraw import WithdrawMoney
 from routers.users import register, login, view_credit_info, view_user_info, create_contact, delete_contact, get_all_contacts, update_user_info, deposit, withdraw
